@@ -22,7 +22,6 @@ For each user-story, we specify what it entails to be able to map out what aspec
 17. As a hotel manager, I want to allow people to pay before a booking is created
 
 ## Specifications
-| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 | **User story number** | **Spec** | **Spec** | **Spec** | **Spec** | **Spec** | **Spec** | **Spec** | **Spec** | **Spec** | **Spec** | **Spec** |
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 | 1 | Searching by date (from-to) | Show types available rooms (quality) | Show amount of each room-type available | Omit unavailable room-types | Specify by amount size (for what amount of people) |  |  |  |  |  |  |
