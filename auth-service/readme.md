@@ -12,6 +12,9 @@ JWTs. The only service in the system that handles passwords or user credentials.
 - Authenticate users (login) and issue signed JWTs on success
 - Refresh expired JWTs
 - Store and manage user credentials and roles
+- Signing out users
+- Session management
+- Manage user authorisation (user/admin)
 
 ## Non-responsibilities
 - Validating JWTs on incoming requests (API Gateway)
@@ -28,6 +31,9 @@ JWTs. The only service in the system that handles passwords or user credentials.
 - Must issue signed JWTs containing user ID and roles
 - Must connect to its own dedicated Postgres instance
 - Must validate credentials against its own DB on login
+- Must validate sessions against DB
+- Must be able to invalidate sessions in DB
+- Must be able to differentiate permissions based on type of user (normal user/admin)
 
 ## Non-requirements
 - Does not validate JWTs on every request: that is handled by the API Gateway
