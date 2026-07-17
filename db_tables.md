@@ -207,3 +207,5 @@ This document contains the tables (with which content) the databases should have
     <td></td><td></td>
   </tr>
 </table>
+
+![Relations of the databases and tables](project-images/db_relations_img.png)
