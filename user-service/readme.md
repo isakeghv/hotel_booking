@@ -4,7 +4,7 @@
 Microservice
 
 ## Description
-Handles user-information management. Used during registration to register the users basic such as name, phone number etc. Should not be mixed with the auth-service. Has its own db for users, which should have the same user_id as in auth-db. Does not handle user credentials (email/password) only for user-information. Is created to make the system more scalable, while respecting the separation of concerns, if it later would be implemented that user information can be updated/modified. This will initially have few requirements and responsibilities, as its main purpose is to support an architecture possible to scale later, not to currently allow accounts to be disabled/modified etc.
+Handles user-information management. Used during registration to register the users basic such as name, phone number etc. Should not be mixed with the auth-service. Has its own db for users, which should have the same user_id as in auth-db. Does not handle user credentials (email/password) only for user-information. Is created to make the system more scalable, while respecting the separation of concerns, if it later would be implemented that user information can be updated/modified. This will initially have few requirements and responsibilities, as its main purpose is to support an architecture possible to scale later, not to currently allow accounts to be disabled/modified etc. 
 
 ## Responsibilities
 - Hold non-auth user-information
@@ -41,4 +41,7 @@ all state lives in the Postgres container. Both the service container(s) and its
 Postgres container should be on the internal Docker network only, not publicly exposed.
 
 ## General notes
-- Nothing currently noteworthy, its main task is to support a project which might later scale and therefore need this service.
+- "account_active" is in the DB of both user-service and auth service, as they serve different purposes
+  - For auth-service, check if an active account is being attempted to sign into without having to contact the user-service
+  - For the user-service, provide an overview of accounts that are active/inactive, so that it can be applied as a filter when querying the db - only to find users, not related to auth.
+- Nothing else currently noteworthy, its main task is to support a project which might later scale and therefore need this service.

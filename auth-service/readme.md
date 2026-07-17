@@ -52,5 +52,8 @@ Postgres container should be on the internal Docker network only, not publicly e
 
 ## General notes
 - Only called by the API Gateway for login and registration routes
+- "account_active" is in the DB of both user-service and auth service, as they serve different purposes
+  - For auth-service, check if an active account is being attempted to sign into without having to contact the user-service
+  - For the user-service, provide an overview of accounts that are active/inactive, so that it can be applied as a filter when querying the db - only to find users, not related to auth.
 - No other microservice calls the Auth Service directly: downstream services
   rely solely on the `X-User-Id` and `X-User-Roles` headers forwarded by the gateway

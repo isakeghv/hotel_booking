@@ -3,7 +3,7 @@ This document contains the tables (with which content) the databases should have
 
 <table>
   <tr>
-    <th rowspan="7">User DB</th>
+    <th rowspan="8">User DB</th>
     <th colspan="2">user_table</th>
   </tr>
   <tr>
@@ -31,7 +31,7 @@ This document contains the tables (with which content) the databases should have
 
 <table>
   <tr>
-    <th rowspan="6">Auth DB</th>
+    <th rowspan="7">Auth DB</th>
     <th colspan="2">user_table</th>
     <th colspan="2">session_table</th>
   </tr>
@@ -54,6 +54,10 @@ This document contains the tables (with which content) the databases should have
   <tr>
     <td>permission_level</td><td>Int</td>
     <td>expires_at</td><td>Int</td>
+  </tr>
+  <tr>
+    <td>account_active</td><td>Boolean</td>
+    <td></td><td></td>
   </tr>
 </table>
 
