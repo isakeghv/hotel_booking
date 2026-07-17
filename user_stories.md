@@ -62,6 +62,7 @@ Database structure is as specified in user story 2.
 Users are stored across two separate databases for separation of concerns: a user database and an auth database, each with its own service.
 
 | user-db | auth-db user-table | auth-db session-table |
+| --- | --- | --- |
 | user_id (PK) | user_id (PK from user-db) | session_id (PK) |
 | first_name (string) | email (email) | user_id (FK) |
 | last_name (string) | password (hashed string) | issued_at (Date-time) |
