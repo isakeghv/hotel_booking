@@ -24,6 +24,9 @@ This document contains the tables (with which content) the databases should have
   <tr>
     <td>phone_number</td><td>Int</td>
   </tr>
+  <tr>
+    <td>account_active</td><td>Boolean</td>
+  </tr>
 </table>
 
 <table>
