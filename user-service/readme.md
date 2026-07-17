@@ -41,6 +41,7 @@ all state lives in the Postgres container. Both the service container(s) and its
 Postgres container should be on the internal Docker network only, not publicly exposed.
 
 ## General notes
+- For now, this will likely only contain one endpoint (POST) to create the user.
 - "account_active" is in the DB of both user-service and auth service, as they serve different purposes
   - For auth-service, check if an active account is being attempted to sign into without having to contact the user-service
   - For the user-service, provide an overview of accounts that are active/inactive, so that it can be applied as a filter when querying the db - only to find users, not related to auth.
