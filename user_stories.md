@@ -119,10 +119,10 @@ Similar to user story 15, but uses a patch or put operation to modify existing a
 **17) As a hotel manager, I want people to pay before a booking is created**<br>
 Before payment, the system locks the room in both the booking and inventory caches to prevent double-booking. Payment is processed first. Once payment is confirmed, it is recorded in the payment database. The booking and inventory caches are then flushed to their respective databases. Once complete, the notification service sends a confirmation email.
 
-| Table name: | user_table |
+| Database | Table name |
 | ------------ | ------------ |
-| Column name  | Data type    |
-| ------------ | ------------ |
+| User DB | user_table |
+| **Column name**  | **Data type**    |
 | user_id      | PK, ObjectId |
 | first_name   | String       |
 | last_name    | String       |
