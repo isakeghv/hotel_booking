@@ -33,7 +33,7 @@ Handles user-information management. Used during registration to register the us
 - Java, Spring Boot
 - Spring Security
 - jjwt (JWT issuing and signing)
-- Connects to auth database via internal Docker network - uses postgres
+- Connects to user database via internal Docker network - uses postgres
 
 ## Dockerizing
 Runs as its own container. Can run as multiple instances since it is stateless: 
