@@ -104,7 +104,7 @@ This document contains the tables (with which content) the databases should have
     <th colspan="2">cancellations</th>
     <th colspan="2">cancelled_addons</th>
     <th colspan="2">cancelled_items</th>
-    <th colspan="2">item_addons</th>
+    <th colspan="2">booking_addons</th>
   </tr>
   <tr>
     <th>Column name</th><th>Data type</th>
@@ -165,6 +165,8 @@ This document contains the tables (with which content) the databases should have
     <th colspan="2">room_images</th>
     <th colspan="2">accommodations</th>
     <th colspan="2">room_included</th>
+    <th colspan="2">room_beds</th>
+    <th colspan="2">bed_types</th>
     <th colspan="2">room_information</th>
     <th colspan="2">room_rules</th>
   </tr>
@@ -177,59 +179,71 @@ This document contains the tables (with which content) the databases should have
     <th>Column name</th><th>Data type</th>
     <th>Column name</th><th>Data type</th>
     <th>Column name</th><th>Data type</th>
+    <th>Column name</th><th>Data type</th>
+    <th>Column name</th><th>Data type</th>
   </tr>
   <tr>
     <td>type_id</td><td>UUID (PK)</td>
     <td>room_id</td><td>UUID (PK)</td>
-    <td>occupied_id</td><td>UUID (PK)</td>
+    <td>occupied_id</td><td>UUID (FK)</td>
     <td>image_id</td><td>UUID (PK)</td>
     <td>accommodation_id</td><td>UUID (PK)</td>
-    <td>included_id</td><td>UUID (PK)</td>
-    <td>information_id</td><td>UUID (PK)</td>
+    <td>type_id</td><td>UUID (FK)</td>
+    <td>type_id</td><td>UUID (FK)</td>
+    <td>bed_id</td><td>UUID (PK)</td>
+    <td>information_id</td><td>UUID (FK)</td>
     <td>rule_id</td><td>UUID (PK)</td>
   </tr>
   <tr>
     <td>room_price</td><td>INT</td>
     <td>type_id</td><td>UUID (FK)</td>
-    <td>room_id</td><td>UUID (FK)</td>
+    <td>type_id</td><td>UUID (FK)</td>
     <td>type_id</td><td>UUID (FK)</td>
     <td>accommodation</td><td>VARCHAR</td>
-    <td>type_id</td><td>UUID (FK)</td>
+    <td>accommodation_id</td><td>UUID (FK)</td>
+    <td>bed_id</td><td>UUID (FK)</td>
+    <td>size</td><td>INT</td>
     <td>type_id</td><td>UUID (FK)</td>
     <td>type_id</td><td>UUID (FK)</td>
   </tr>
   <tr>
     <td>room_name</td><td>VARCHAR</td>
     <td>room_number</td><td>INT</td>
-    <td>type_id</td><td>UUID (FK)</td>
+    <td>from_time</td><td>DATETIME</td>
     <td>image_path</td><td>VARCHAR</td>
     <td>price</td><td>INT</td>
-    <td>accommodation_id</td><td>UUID (FK)</td>
-    <td>information</td><td>VARCHAR</td>
+    <td>amount</td><td>INT</td>
+    <td>amount</td><td>INT</td>
+    <td>capacity</td><td>INT</td>
+    <td>information</td><td>VARCHAR[]</td>
     <td>rule</td><td>VARCHAR</td>
   </tr>
   <tr>
     <td>capacity</td><td>INT</td>
     <td></td><td></td>
-    <td>from_time</td><td>DATETIME</td>
+    <td>to_time</td><td>DATETIME</td>
     <td>image_number</td><td>INT</td>
     <td>possible_addon</td><td>BOOLEAN</td>
-    <td>amount</td><td>INT</td>
+    <td>show_amount</td><td>BOOLEAN</td>
     <td></td><td></td>
+    <td>name</td><td>VARCHAR</td>
+    <td>category</td><td>VARCHAR</td>
     <td>allowed</td><td>BOOLEAN</td>
   </tr>
   <tr>
-    <td>double_beds</td><td>INT</td>
     <td></td><td></td>
-    <td>to_time</td><td>DATETIME</td>
+    <td></td><td></td>
+    <td></td><td></td>
     <td>image_text</td><td>VARCHAR</td>
     <td></td><td></td>
-    <td>show_amount</td><td>BOOLEAN</td>
+    <td></td><td></td>
+    <td></td><td></td>
+    <td></td><td></td>
     <td></td><td></td>
     <td></td><td></td>
   </tr>
   <tr>
-    <td>single_beds</td><td>INT</td>
+    <td></td><td></td>
     <td></td><td></td>
     <td></td><td></td>
     <td>alt_text</td><td>VARCHAR</td>
@@ -237,7 +251,9 @@ This document contains the tables (with which content) the databases should have
     <td></td><td></td>
     <td></td><td></td>
     <td></td><td></td>
+    <td></td><td></td>
+    <td></td><td></td>
   </tr>
 </table>
 
-![Relations of the databases and tables](project-images/hotel_booking_db_relations.png)
+![Relations of the databases and tables](project-images/hotelbooking_db_relations.png)
