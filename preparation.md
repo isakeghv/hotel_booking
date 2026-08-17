@@ -50,3 +50,30 @@ It could be stored in the inventory-service's cache that it is reserved, along w
 
 ### Outcome 5 - How to reserve a booking
 Booking has two stages, making the reservation and specifying what it should include, and payment (finalizing). When starting a reservation, a booking_id is created and stored in the booking service's cache, key'ed by the user_id and other relevant information. It is also specified in the inventory service's cache, where the booking_id can be used to identify it. Any modifications to the booking being made before it is finalized, is updated to the relevant caches. When finalizing the booking, it fetches the booking_id from the cache using user_id, the booking is locked to prevent duplicate payments, and relevant data is fetched from the inventory service. When payment is finalized, data is passed from cache to db in both booking- and inventory-service. Additionally, the payment itself is stored in the payment-db, and uses the booking_id and user_id from the cached booking_service. Though, if one of the databases goes down, especially booking, data necessary for users to simply check in would be lost. A system able to compile that lost information could be set up with the remaining databases (an ad hoc "RAID" system). But that would require additional data to be stored in databases, and might not properly respect separation of concerns
+
+### Question 6 - Deleting booking-option
+If a booking-option (room, accomodation, bed etc) is deleted while there are bookings with that item, some of the necessary information for it would be lost. So, how can something be deleted from the inventory-database, or removed as a bookable option while there might be bookings with that option?
+
+### Discussion 6 - Deleting booking-option
+If deleting entries, it can create issues in relations within and between services. For example a payment record would not be tied to an actual user. Therefore it is more relevant to use flags, such as "active" to keep track of it, enabling the system to stay properly connected. Additionally, if a room-type is deleted, it would create problems with potential future bookings, as their room-type is no longer available.
+
+### Outcome  6 - Deleting booking-option
+Instead of deleting items Items that are deleted only if they are set as "is_active: false", and that no future bookings are tied to it
+
+### Question 7 - Different booking-options tiers
+If the hotel wants to give different options for a single room-type, for example with breakfast included, without breakfast etc, currently that is not possible. They can only set that a room-type includes specific things, they cannot set that one has with breakfast included, that refund possible, or something else within a single room-type, and then have different pricing options for them when they book. They can save them as different room-types even though the room itself is the same, but that could create problems in availability etc, or force users to add something as an addon, that could easily be included as a variant of the room. So, what is the best way to handle that?
+
+### Discussion 7 - Different booking-options tiers
+One way to do it, is in the database to store variants of a room-type as a "child" of a room-type, where it has its own specifications, that means the room-type itself only stored data global to the room-type, and all its variants, for example the base-price and content included, while variants store additional information, such as additional price and what it contains. Room occupancy would in that be stored to the room-type, not variant, as the variant is still the same room-type, but what that booking-option includes is what differs. Since the database is set up to link accomodations to room-type, that would mean that the variants might need an additional table for linking it, as well as one for variants. Though, that would create two additional tables which might not be desireable, as it would scale the inventory-db a bit. It could be linked purely with relational properties, and simply setting a variant-number, but that would create more mess that could be more difficult to manage. Since it needs to allow for a system where managers can edit and change what the hotel offers, variants of a room becomes part of that, meaning that they need to be able to create, edit and delete a room variant. Since that data is somewhat tied to a booking, it cannot simply be deleted
+
+This also means the booking-item would need to know which variant the booking is tied to, so that it is easier for employees, and users who view their bookings to view what their booking includes. That does not need a new table, as each item will be tied directly to one item: One booking can include several booking-items. Each booking-item describes a single room, and a single room can only be one variant of a room-type.
+
+### Outcome  7 - Different booking-options tiers
+An additional table is created for room-variants, which describe a variant of that room. On top of that, an additional table is created which links what each variant includes, for example breakfast or extended refund. Additionally, the id (PK) in the variant-table is included in the booking-item table, so that it is easy to map what the booking-item includes. To allow the managers to modify, create and disabling, 3 endpoints should be implemented, one for creating, one for editing, and one for disabling. The last one is for setting if a variant is active or not, so it can be specified if it can be booked as a variant-option or not, since simply deleting it could remove information that might be necessary for other existing future bookings.
+
+### Question 8 - Cached shopping-cart
+- booking-cache shopping-cart and booking-locking system. Should it be two separate caches, or one combined?
+
+### Discussion 8 - Cached shopping-cart
+
+### Outcome 8 - Cached shopping-cart
