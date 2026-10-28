@@ -1,0 +1,85 @@
+volumes:
+  image-storage:
+
+services:
+  auth-db:
+    image: 'postgres:latest'
+    env_file:
+      - ./auth-db/.env
+
+  user-db:
+    image: 'postgres:latest'
+    env_file:
+      - ./user-db/.env
+
+  inventory-db:
+    image: 'postgres:latest'
+    env_file:
+      - ./inventory-db/.env
+
+
+  kafka:
+    image: apache/kafka:latest
+    env_file:
+      - ./kafka/.env
+
+
+  auth-service:
+    build: ./auth-service/auth-service-project
+    env_file:
+      - ./auth-service/auth-service-project/.env
+    expose:
+      - "3000"
+    depends_on:
+      - auth-db
+      - kafka
+
+  user-service:
+    build: ./user-service/user-service-project
+    env_file:
+      - ./user-service/user-service-project/.env
+    expose:
+      - "3001"
+    depends_on:
+      - user-db
+      - kafka
+
+  inventory-service:
+    build: ./inventory-service/inventory-service-project
+    env_file:
+      - ./inventory-service/inventory-service-project/.env
+    expose:
+      - "3002"
+    depends_on:
+      - inventory-db
+      - kafka
+  
+  image-service:
+    build: ./image-service
+    env_file:
+      - ./image-service/.env
+    expose:
+      - "3003"
+    volumes:
+      - image-storage:/app/images
+
+  
+  gateway-ratelimit-cache:
+    image: 'redis:latest'
+  
+  gateway-blocklist-cache:
+    image: 'redis:latest'
+
+  api-gateway:
+    build: ./api-gateway/api-gateway
+    env_file:
+      - ./api-gateway/api-gateway/.env
+    ports:
+      - "8080:8080"
+    depends_on:
+      - auth-service
+      - user-service
+      - inventory-service
+      - image-service
+      - gateway-ratelimit-cache
+      - gateway-blocklist-cache

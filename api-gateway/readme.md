@@ -4,8 +4,8 @@
 API Gateway
 
 ## Description
-Single internal entry point for all client traffic after Traefik. Responsible for
-validating identity, enforcing per-user rate limits, and routing requests to the
+Single internal entry point for all client traffic. Responsible for
+validating identity, enforcing rate limits, and routing requests to the
 correct microservice. Does not contain any business logic.
 
 ## Responsibilities
@@ -19,7 +19,6 @@ correct microservice. Does not contain any business logic.
 ## Non-responsibilities
 - Issuing or refreshing JWTs (Auth Service)
 - Business logic or data processing of any kind (respective microservices)
-- IP-level rate limiting (Traefik)
 
 ## Concerns/constraints
 - Must be stateless: no session or user state stored here, enabling horizontal scaling
@@ -31,7 +30,6 @@ correct microservice. Does not contain any business logic.
 - Must forward user ID and roles as headers (e.g. `X-User-Id`, `X-User-Roles`) to downstream services
 - Must enforce per-user rate limits backed by Redis
 - Must integrate with Eureka for dynamic service discovery and load balancing across microservice instances
-- Must be horizontally scalable (multiple instances behind Traefik)
 
 ## Non-requirements
 - Does not need to authenticate users or issue tokens (Auth Service)
@@ -44,10 +42,7 @@ correct microservice. Does not contain any business logic.
 - Redis (rate limiting)
 
 ## Dockerizing
-Runs as multiple container instances behind Traefik, which load balances across
-them. Scales horizontally: add more instances without configuration changes, as
-Traefik detects them automatically and Eureka registers them dynamically.
 
 ## General notes
-- Sits between Traefik and all microservices: no microservice should be reachable without going through here (except on the internal Docker network for service-to-service calls)
+- Sits in front of all microservices: no microservice should be reachable without going through here (except on the internal Docker network for service-to-service calls)
 - Auth Service is only called for login/register flows routed through here: JWT validation itself requires no call to Auth Service

@@ -13,67 +13,51 @@ While the user_id does not have any relational meaning outside the auth-table, i
 ### Outcome 1 - Identifying user cross-microservice
 DB fields containing id's used in more databases are set to be required, but are not auto-provided.
 
-### Question 2 - Specifying user permissions
-If having two types of users (normal user, and hotel admin), how should it be best be specified which permissions the user has? Should it simply be in the jwt token, or should it be stored only in the database?
-
-### Discussion 2 - Specifying user permissions
-This also relates to how secure the system is. if it is simply specified in a jwt token, and passed downstream from the api-gateway, having micro-services trust it blindly, it might be vulnerable. Therefore, it might be better to store that in a database and assign the auth-service the responsibility of providing that information. However, that means the api gateway would need to contact the auth service every time a request is made to validate that, meaning that it might take more time. An option could be to simply specify an endpoint in the auth-service that simply receives the user_id, and returns if the user is admin or normal user (or something similar), enabling the system to only contact that endpoint when actually necessary.
-
-### Outcome 2 - Specifying user permissions
-The database of the auth service is responsible of storing what permissions users have. The auth-service has an endpoint which receives at least user_id of a user, validates it and returns if the user has admin previliges or not. For the future, it might be worth evaluating how many tables the auth db should contain; One containing everything, or more normalized tables.
-
-### Question 3 - Providing basic user information
+### Question 2 - Providing basic user information
 If a front-end was to be implemented later on, should it display the users name, and some basic information?
 If so, what service should provide that? Should it be included in the information returned when an access-token is provided, or only for a specific endpoint (only displayed in a specific page)? In the case of the latter, would it be natural to have that as part of the auth-service, or should it be a separate microservice which does that and has its own database?
 
-### Discussion 3 - Providing basic user information
+### Discussion 2 - Providing basic user information
 Giving that responsibility to the auth service might not be suitable, as its responsibility is related to auth. Though, it might be somewhat overcomplicated to create a separate service with another database only for providing basic information. However, that would create a fundation for a system later allowing for users to modify some of the information that is not auth-related. But, in the case the user changes information related to auth (for example the email), that might quickly become messy, as it would require updates in multiple databases and using several microservices for something quite simple (At least in this project). The outcome depends on the scope and focus of the project. One might argue that simply providing basic information and more endpoints, that do not actually add any additional value to the projects aim, is, for now, out of scope. If using micro-services, it is also something that could be implemented fairly easily later on. Though, it might be worth considering relative to the auth service.
 
-### Outcome 3 - Providing basic user information
+### Outcome 2 - Providing basic user information
 Providing basic information, and allowing for modifying users information, is for now out of scope. Though, which data is stored in the auth table can be taken into consideration. Storing more than user_id, email, and password (and role: user/admin) in the auth db might be redundant, as additional information would likely be handled by a user-service (and its db) later on if implemented. That would respect separation of concerns, as other information, such as name, phone number, address etc, is not relevant for auth.
 
-### Question 4 - Caching and db update
+### Question 3 - Caching and db update
 How should the caching and db updates be done? For example, when a post request is made, and it should be cached, should it first update the database and then cache, or use other methods, such as caching first, return a response to the client, and then update the db after the response is done?
 
-### Discussion 4 - Caching and db update
+### Discussion 3 - Caching and db update
 It depends on what we want to achieve. If we first update the db, and then update the cache, it will take longer than updating the cache, returning a response and then updating the db. Though, the latter option is more vulnerable to issues, for example if there is an issue with updating the db; The client would have already received a success response, while there was an issue with the actual update, meaning that it should have returned a failed response. Optimally, it would be desired to have both speed and accuracy, but it might not be possible to have the desired outcome of both options. Caching has to be considered relative to some different scenarios, both read and write operations, within and across micro services, therefore it is not suitable to have one single method of doing it. Optimized speed has to go along with robustness and minimize points of failure.
 
-### Outcome 4 - Caching and db update
+### Outcome 3 - Caching and db update
 The main method would be to use cache aside for reads, first checking cache, then db, and including in cache on reading the db.
 For write operations, it depends on the task being performed. Some cache requires locking (bookings), while others is for updated. Generally, it would mainly be using write-through, and in some cases using distributed locking: First writing to cache, and completing the process before passing it from cache to the db. That enables the system to check that it was correctly writing to db before returning a response to the client.
 
-### Question 5 - How to reserve a booking
+### Question 4 - How to reserve a booking
 When a user is in the process of making a booking of a room, how is it best to reserve that the room(s) is not available to others, while it is available to the current user?
 
-### Discussion 5 - How to reserve a booking
+### Discussion 4 - How to reserve a booking
 It could be stored in the inventory-service's cache that it is reserved, along with who it is reserved for. Though, that means that it needs to store additional information that otherwise is not used in the inventory-services's database. The data can be seen as somewhat redundant, and is additional data which as scale might require more data than strictly necessary. Though, it must be stored in the inventory-service's cache that it is not available, in order to show the correct amount of rooms available to other users, to avoid users attemtping to book the same room. It could be stored in the booking-services caching, though, if that is to primarily be used for locking bookings, avoiding that a payment is made twice, then it might conflict with that. However, it is the more relevant place to store that information. One alternative is to have an endpoint that simply reserves the booking, which results in the booking-service returning a booking_id, which is stored in the booking-service's cache (along with some other necessary information such as user_id), and triggers the inventory service to reserve the room in its cache (along with the booking_id). That locks the room from being bookable from anyone else than that user with that booking_id. When the actual booking is made (payment), the cached booking_id is used to fetch the booking-details from the inventory-service's cache, and the payment is then locked, preventing duplicate payments from being possible. When the payment succeeds, its unlocked in cache, and the booking is stored in the db with the same booking_id. It then calls the inventory-service to pass the cached booking on to the inventory-db.
 
-### Outcome 5 - How to reserve a booking
+### Outcome 4 - How to reserve a booking
 Booking has two stages, making the reservation and specifying what it should include, and payment (finalizing). When starting a reservation, a booking_id is created and stored in the booking service's cache, key'ed by the user_id and other relevant information. It is also specified in the inventory service's cache, where the booking_id can be used to identify it. Any modifications to the booking being made before it is finalized, is updated to the relevant caches. When finalizing the booking, it fetches the booking_id from the cache using user_id, the booking is locked to prevent duplicate payments, and relevant data is fetched from the inventory service. When payment is finalized, data is passed from cache to db in both booking- and inventory-service. Additionally, the payment itself is stored in the payment-db, and uses the booking_id and user_id from the cached booking_service. Though, if one of the databases goes down, especially booking, data necessary for users to simply check in would be lost. A system able to compile that lost information could be set up with the remaining databases (an ad hoc "RAID" system). But that would require additional data to be stored in databases, and might not properly respect separation of concerns
 
-### Question 6 - Deleting booking-option
+### Question 5 - Deleting booking-option
 If a booking-option (room, accomodation, bed etc) is deleted while there are bookings with that item, some of the necessary information for it would be lost. So, how can something be deleted from the inventory-database, or removed as a bookable option while there might be bookings with that option?
 
-### Discussion 6 - Deleting booking-option
+### Discussion 5 - Deleting booking-option
 If deleting entries, it can create issues in relations within and between services. For example a payment record would not be tied to an actual user. Therefore it is more relevant to use flags, such as "active" to keep track of it, enabling the system to stay properly connected. Additionally, if a room-type is deleted, it would create problems with potential future bookings, as their room-type is no longer available.
 
-### Outcome  6 - Deleting booking-option
+### Outcome  5 - Deleting booking-option
 Instead of deleting items Items that are deleted only if they are set as "is_active: false", and that no future bookings are tied to it
 
-### Question 7 - Different booking-options tiers
+### Question 6 - Different booking-options tiers
 If the hotel wants to give different options for a single room-type, for example with breakfast included, without breakfast etc, currently that is not possible. They can only set that a room-type includes specific things, they cannot set that one has with breakfast included, that refund possible, or something else within a single room-type, and then have different pricing options for them when they book. They can save them as different room-types even though the room itself is the same, but that could create problems in availability etc, or force users to add something as an addon, that could easily be included as a variant of the room. So, what is the best way to handle that?
 
-### Discussion 7 - Different booking-options tiers
+### Discussion 6 - Different booking-options tiers
 One way to do it, is in the database to store variants of a room-type as a "child" of a room-type, where it has its own specifications, that means the room-type itself only stored data global to the room-type, and all its variants, for example the base-price and content included, while variants store additional information, such as additional price and what it contains. Room occupancy would in that be stored to the room-type, not variant, as the variant is still the same room-type, but what that booking-option includes is what differs. Since the database is set up to link accomodations to room-type, that would mean that the variants might need an additional table for linking it, as well as one for variants. Though, that would create two additional tables which might not be desireable, as it would scale the inventory-db a bit. It could be linked purely with relational properties, and simply setting a variant-number, but that would create more mess that could be more difficult to manage. Since it needs to allow for a system where managers can edit and change what the hotel offers, variants of a room becomes part of that, meaning that they need to be able to create, edit and delete a room variant. Since that data is somewhat tied to a booking, it cannot simply be deleted
 
 This also means the booking-item would need to know which variant the booking is tied to, so that it is easier for employees, and users who view their bookings to view what their booking includes. That does not need a new table, as each item will be tied directly to one item: One booking can include several booking-items. Each booking-item describes a single room, and a single room can only be one variant of a room-type.
 
-### Outcome  7 - Different booking-options tiers
+### Outcome  6 - Different booking-options tiers
 An additional table is created for room-variants, which describe a variant of that room. On top of that, an additional table is created which links what each variant includes, for example breakfast or extended refund. Additionally, the id (PK) in the variant-table is included in the booking-item table, so that it is easy to map what the booking-item includes. To allow the managers to modify, create and disabling, 3 endpoints should be implemented, one for creating, one for editing, and one for disabling. The last one is for setting if a variant is active or not, so it can be specified if it can be booked as a variant-option or not, since simply deleting it could remove information that might be necessary for other existing future bookings.
-
-### Question 8 - Cached shopping-cart
-- booking-cache shopping-cart and booking-locking system. Should it be two separate caches, or one combined?
-
-### Discussion 8 - Cached shopping-cart
-
-### Outcome 8 - Cached shopping-cart

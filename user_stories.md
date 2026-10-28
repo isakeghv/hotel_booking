@@ -20,6 +20,12 @@ For each user-story, we specify what it entails to be able to map out what aspec
 15. As a hotel manager, I want to be able to create new accounts for employees/managers.
 16. As a hotel manager, I want to be able to manage user- and employee-accounts.
 17. As a hotel manager, I want to allow people to pay before a booking is created.
+18. As a hotel manager, I want to be able to create room-types.
+19. As a hotel manager, I want to be able to create room-type variations.
+20. As a hotel manager, I want to be able to specify what a room-type has, such as beds etc.
+21. As a hotel manager, I want to be able to create separate rooms.
+22. As a hotel manager, I want to be able to create bed-types.
+
 
 ## Specifications
 

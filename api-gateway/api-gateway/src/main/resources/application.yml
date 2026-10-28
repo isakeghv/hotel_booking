@@ -1,0 +1,110 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+            - id: auth-service
+              uri: http://auth-service:3000
+              predicates:
+                - Path=/auth/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 10
+                    redis-rate-limiter.burstCapacity: 20
+
+            - id: user-service
+              uri: http://user-service:3001
+              predicates:
+                - Path=/users/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 10
+                    redis-rate-limiter.burstCapacity: 20
+
+            - id: inventory-service
+              uri: http://inventory-service:3002
+              predicates:
+                - Path=/inventory/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 10
+                    redis-rate-limiter.burstCapacity: 20
+
+            - id: inventory-service
+              uri: http://image-service:3003
+              predicates:
+                - Path=/images/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 10
+                    redis-rate-limiter.burstCapacity: 20
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: gateway
+
+gateway:
+  public-paths:
+    - path: /images/{filename}
+      methods: [GET]
+    - path: /auth/refresh
+      methods: [GET]
+    - path: /auth/signin
+      methods: [POST]
+    - path: /auth/signup
+      methods: [POST]
+
+  sign-out-paths:
+    - path: /auth/signout
+      methods: [POST]
+      allowed-levels: [0, 1, 2, 3]
+    - path: /auth/signout/sessions
+      methods: [POST]
+      allowed-levels: [0, 1, 2, 3]
+
+  route-permissions:
+    - path: /inventory/beds
+      methods: [GET, POST]
+      allowed-levels: [2, 3]
+    - path: /inventory/extras
+      methods: [POST]
+      allowed-levels: [2, 3]
+    - path: /inventory/extras
+      methods: [GET]
+      allowed-levels: [0, 1, 2, 3]
+    - path: /inventory/roomtypes
+      methods: [POST]
+      allowed-levels: [2, 3]
+    - path: /inventory/roomtypes
+      methods: [GET]
+      allowed-levels: [0, 1, 2, 3]
+    - path: /inventory/roomtypes/{roomTypeId}
+      methods: [GET]
+      allowed-levels: [0, 1, 2, 3]
+    - path: /inventory/roomtypes/{roomTypeId}/images
+      methods: [POST]
+      allowed-levels: [2, 3]
+    - path: /inventory/roomtypes/{roomTypeId}/beds/{bedId}
+      methods: [POST]
+      allowed-levels: [2, 3]
+    - path: /inventory/roomtypes/{roomTypeId}/extras/{extraId}
+      methods: [POST]
+      allowed-levels: [2, 3]
+    - path: /auth/sessions
+      methods: [GET]
+      allowed-levels: [0, 1, 2, 3]
+    - path: /inventory/roomtypes/{roomTypeId}/variants
+      methods: [POST]
+      allowed-levels: [2, 3]
