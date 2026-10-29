@@ -1,11 +1,11 @@
 package com.example.inventoryserviceproject.controller;
 
 
+import com.example.inventoryserviceproject.dto.ReviewLinkExtraToVariant;
 import com.example.inventoryserviceproject.dto.ReviewNewRoomVariant;
 import com.example.inventoryserviceproject.service.VariantService;
 import com.example.inventoryserviceproject.utils.ClientResponse;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -42,6 +42,25 @@ public class VariantController {
             @PathVariable UUID roomTypeId
     ){
         variantService.createRoomTypeVariant(request, roomTypeId);
+
+        return ClientResponse.okEmpty();
+    }
+
+    /**
+     * Links an existing extra to a variant, so it is included with the variant.
+     *
+     * @param request   the validated amount and visibility of the extra
+     * @param variantId the id of the variant
+     * @param extrasId  the id of the extra to link
+     * @return an empty successful response
+     */
+    @PostMapping("/variants/{variantId}/extras/{extrasId}")
+    public ResponseEntity<Map<String, String>> linkExtraToVariant(
+            @Valid @RequestBody ReviewLinkExtraToVariant request,
+            @PathVariable UUID variantId,
+            @PathVariable UUID extrasId
+    ){
+        variantService.linkExtraToVariant(request, variantId, extrasId);
 
         return ClientResponse.okEmpty();
     }
