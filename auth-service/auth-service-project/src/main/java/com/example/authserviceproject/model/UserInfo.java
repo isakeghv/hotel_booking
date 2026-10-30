@@ -9,7 +9,6 @@ import jakarta.persistence.Embeddable;
 public class UserInfo {
     private String firstName;
     private String lastName;
-    private String countryCode;
     private String phoneNumber;
 
     /**
@@ -22,13 +21,11 @@ public class UserInfo {
      *
      * @param firstName the user's first name
      * @param lastName the user's last name
-     * @param countryCode the phone country code
-     * @param phoneNumber the phone number without country code
+     * @param phoneNumber the phone number in international format, including the country calling code
      */
-    public  UserInfo(String firstName, String lastName, String countryCode, String phoneNumber){
+    public  UserInfo(String firstName, String lastName, String phoneNumber){
         this.firstName = firstName;
         this.lastName = lastName;
-        this.countryCode = countryCode;
         this.phoneNumber = phoneNumber;
     }
 
@@ -61,21 +58,7 @@ public class UserInfo {
     public void setLastName(String lastName){ this.lastName = lastName; }
 
     /**
-     * Returns the phone country code.
-     *
-     * @return the country code
-     */
-    public String getCountryCode(){ return countryCode; }
-
-    /**
-     * Sets the phone country code.
-     *
-     * @param countryCode the country code
-     */
-    public void setCountryCode(String countryCode){ this.countryCode = countryCode; }
-
-    /**
-     * Returns the phone number without country code.
+     * Returns the phone number, including the country calling code.
      *
      * @return the phone number
      */
@@ -84,14 +67,7 @@ public class UserInfo {
     /**
      * Sets the phone number.
      *
-     * @param phoneNumber the phone number without country code
+     * @param phoneNumber the phone number in international format, including the country calling code
      */
     public void setPhoneNumber(String phoneNumber){ this.phoneNumber = phoneNumber; }
-
-    /**
-     * Returns the phone number with the country code placed in front of it.
-     *
-     * @return the country code and phone number concatenated
-     */
-    public String getFullPhoneNumber(){ return countryCode + phoneNumber; }
 }

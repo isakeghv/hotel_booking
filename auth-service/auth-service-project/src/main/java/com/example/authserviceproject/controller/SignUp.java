@@ -1,7 +1,6 @@
 package com.example.authserviceproject.controller;
 
 import com.example.authserviceproject.dto.ReviewSignUp;
-import com.example.authserviceproject.model.User;
 import com.example.authserviceproject.service.RegistrationService;
 import com.example.authserviceproject.utils.ClientResponse;
 import jakarta.validation.Valid;

@@ -9,7 +9,6 @@ import java.util.UUID;
  * @param firstName the user's first name
  * @param lastName the user's last name
  * @param email the user's email address
- * @param phoneNumber the user's phone number
- * @param countryCode the country code belonging to the phone number
+ * @param phoneNumber the user's phone number in international format, including the country calling code
  */
-public record UserRegisteredEvent(UUID userId, String firstName, String lastName, String email, String phoneNumber, String countryCode) {}
+public record UserRegisteredEvent(UUID userId, String firstName, String lastName, String email, String phoneNumber) {}

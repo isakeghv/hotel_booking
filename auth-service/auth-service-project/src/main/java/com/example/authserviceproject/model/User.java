@@ -56,7 +56,7 @@ public class User {
         this.credentials = new Credentials(req.email(), req.password());
         this.permissionLevel = 0;
         this.isActive = true;
-        this.info = new UserInfo(req.firstName(), req.lastName(), req.countryCode(), req.phoneNumber());
+        this.info = new UserInfo(req.firstName(), req.lastName(), req.phoneNumber());
     }
 
     /**

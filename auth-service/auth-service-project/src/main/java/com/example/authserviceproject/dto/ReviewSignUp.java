@@ -10,8 +10,7 @@ import jakarta.validation.constraints.Size;
  *
  * @param firstName the user's first name, 3-30 alphabetical characters
  * @param lastName the user's last name, 3-50 alphabetical characters
- * @param countryCode the phone country code, written as {@code 00} followed by 1-3 digits
- * @param phoneNumber the phone number, which must pass {@link ValidPhoneNumber} validation
+ * @param phoneNumber the phone number in international format including the country calling code, which must pass {@link ValidPhoneNumber} validation
  * @param email the user's email address, 6-80 characters in a valid email format
  * @param password the user's password, 8-150 characters with at least 2 lowercase, 2 uppercase, 2 digits and 2 special characters
  */
@@ -25,10 +24,6 @@ public record ReviewSignUp(
         @Size(max = 50, min = 3, message = "Must be between 3 and 50 characters long.")
         @Pattern(regexp = "^[a-zA-Z]+$", message = "Must be alphabetical")
         String lastName,
-
-        @NotBlank(message = "Country code is required")
-        @Pattern(regexp = "^00\\d{1,3}$", message = "Must be numerical")
-        String countryCode,
 
         @NotBlank(message = "Phone number code is required")
         @ValidPhoneNumber(message = "Must be a valid phone number")

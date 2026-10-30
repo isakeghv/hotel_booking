@@ -19,7 +19,6 @@ public class User {
     private UUID userId;
     private String firstName;
     private String lastName;
-    private String countryCode;
     private String phoneNumber;
     private String email;
     private boolean isActive;
@@ -40,7 +39,6 @@ public class User {
         this.firstName = event.firstName();
         this.lastName = event.lastName();
         this.email = event.email();
-        this.countryCode = event.countryCode();
         this.phoneNumber = event.phoneNumber();
         this.isActive = true;
     }
@@ -67,14 +65,7 @@ public class User {
     public String getLastName(){ return lastName; }
 
     /**
-     * Returns the country calling code for the user's phone number.
-     *
-     * @return the country code
-     */
-    public String getCountryCode(){ return countryCode; }
-
-    /**
-     * Returns the user's phone number.
+     * Returns the user's phone number in international format, including the country calling code.
      *
      * @return the phone number
      */

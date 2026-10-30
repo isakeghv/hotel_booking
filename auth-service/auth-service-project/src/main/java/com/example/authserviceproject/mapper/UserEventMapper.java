@@ -22,8 +22,7 @@ public class UserEventMapper {
                 req.firstName(),
                 req.lastName(),
                 req.email(),
-                req.phoneNumber(),
-                req.countryCode()
+                req.phoneNumber()
         );
     }
 }
