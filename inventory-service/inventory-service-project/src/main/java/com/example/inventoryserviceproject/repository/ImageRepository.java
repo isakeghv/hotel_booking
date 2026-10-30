@@ -17,5 +17,5 @@ public interface ImageRepository extends JpaRepository<ImageData, UUID> {
      * @param roomTypeId the id of the room type
      * @return the images for the room type, or an empty list if there are none
      */
-    List<ImageData> findAllByTypeId(UUID roomTypeId);
+    List<ImageData> findAllByRoomTypeId(UUID roomTypeId);
 }

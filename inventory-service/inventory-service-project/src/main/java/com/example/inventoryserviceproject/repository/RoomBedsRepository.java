@@ -19,5 +19,5 @@ public interface RoomBedsRepository extends JpaRepository<RoomBed, RoomBedsId> {
      * @param roomId the id of the room type
      * @return the bed links for the room type, or an empty list if there are none
      */
-    List<RoomBed> findByIdTypeId(UUID roomId);
+    List<RoomBed> findByIdRoomTypeId(UUID roomId);
 }

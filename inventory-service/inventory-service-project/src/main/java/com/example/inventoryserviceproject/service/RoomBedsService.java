@@ -37,17 +37,17 @@ public class RoomBedsService {
      * amount is added to the existing amount, otherwise a new link is created.
      *
      * @param request the validated request containing the amount to add
-     * @param typeId  the id of the room type
+     * @param roomTypeId  the id of the room type
      * @param bedId   the id of the bed type
      * @return the updated room type
      * @throws NotFoundException if the room type or the bed type does not exist
      */
-    public RoomTypeResponse addBedsToRoom(ReviewAddBedToRoom request, UUID typeId, UUID bedId){
+    public RoomTypeResponse addBedsToRoom(ReviewAddBedToRoom request, UUID roomTypeId, UUID bedId){
         // Getting bed and room from service to verify existence, methods throw 404 exception if not found.
         bedService.getSingleBed(bedId);
-        roomTypeService.getRoomType(typeId);
+        roomTypeService.getRoomType(roomTypeId);
 
-        Optional<RoomBed> optRoomBed = roomBedsRepository.findById(new RoomBedsId(typeId, bedId));
+        Optional<RoomBed> optRoomBed = roomBedsRepository.findById(new RoomBedsId(roomTypeId, bedId));
 
         RoomBed roomBed;
 
@@ -56,7 +56,7 @@ public class RoomBedsService {
             int newAmount = roomBed.getAmount() + request.amount();
             roomBed.setAmount(newAmount);
         } else {
-            roomBed = new RoomBed(request, typeId, bedId);
+            roomBed = new RoomBed(request, roomTypeId, bedId);
         }
 
         roomBedsRepository.save(roomBed);

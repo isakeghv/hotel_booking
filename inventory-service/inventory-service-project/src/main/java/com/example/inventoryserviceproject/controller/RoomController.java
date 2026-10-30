@@ -63,13 +63,13 @@ public class RoomController {
      * Adds a bed to a specific room type.
      *
      * @param request the validated details of the bed in the room, such as quantity
-     * @param typeId  the id of the room type
+     * @param roomTypeId  the id of the room type
      * @param bedId   the id of the bed type to add
      * @return an empty successful response
      */
-    @PostMapping("/roomtypes/{typeId}/beds/{bedId}")
-    public ResponseEntity<Map<String, String>> addBedToRoom(@Valid @RequestBody ReviewAddBedToRoom request, @PathVariable UUID typeId, @PathVariable UUID bedId){
-        roomBedsService.addBedsToRoom(request, typeId, bedId);
+    @PostMapping("/roomtypes/{roomTypeId}/beds/{bedId}")
+    public ResponseEntity<Map<String, String>> addBedToRoom(@Valid @RequestBody ReviewAddBedToRoom request, @PathVariable UUID roomTypeId, @PathVariable UUID bedId){
+        roomBedsService.addBedsToRoom(request, roomTypeId, bedId);
         return ClientResponse.okEmpty();
     }
 

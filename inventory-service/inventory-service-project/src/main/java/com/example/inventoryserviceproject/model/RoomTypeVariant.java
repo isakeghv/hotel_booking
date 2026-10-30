@@ -2,6 +2,7 @@ package com.example.inventoryserviceproject.model;
 
 
 import com.example.inventoryserviceproject.dto.ReviewNewRoomVariant;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
@@ -17,7 +18,8 @@ import java.util.UUID;
 public class RoomTypeVariant {
     @Id
     private UUID variantId;
-    private UUID typeId;
+    @Column(name = "type_id")
+    private UUID roomTypeId;
     private String variantName;
     private int extraPrice;
     private boolean isActive;
@@ -37,7 +39,7 @@ public class RoomTypeVariant {
      */
     public RoomTypeVariant(ReviewNewRoomVariant variant, UUID roomTypeId){
         this.variantId = UUID.randomUUID();
-        this.typeId = roomTypeId;
+        this.roomTypeId = roomTypeId;
         this.variantName = variant.variantName();
         this.extraPrice = variant.extraPrice();
         this.isActive = variant.isActive();
@@ -52,7 +54,7 @@ public class RoomTypeVariant {
     /**
      * @return the id of the room type the variant belongs to
      */
-    public UUID getRoomTypeId() { return typeId; }
+    public UUID getRoomTypeId() { return roomTypeId; }
 
     /**
      * @return the name of the variant

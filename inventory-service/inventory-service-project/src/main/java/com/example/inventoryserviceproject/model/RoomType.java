@@ -1,6 +1,7 @@
 package com.example.inventoryserviceproject.model;
 
 import com.example.inventoryserviceproject.dto.ReviewNewRoomType;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
@@ -15,7 +16,8 @@ import java.util.UUID;
 @Table(name = "room_type")
 public class RoomType {
     @Id
-    private UUID typeId;
+    @Column(name = "type_id")
+    private UUID roomTypeId;
     private int roomPrice;
     private String name;
     private int capacity;
@@ -29,14 +31,14 @@ public class RoomType {
     /**
      * Creates a room type with all values specified.
      *
-     * @param typeId    the unique id of the room type
+     * @param roomTypeId    the unique id of the room type
      * @param roomPrice the base price of the room
      * @param name      the display name of the room type
      * @param capacity  the number of guests the room sleeps
      * @param isActive  whether the room type is currently available
      */
-    public RoomType(UUID typeId, int roomPrice, String name, int capacity, boolean isActive){
-        this.typeId = typeId;
+    public RoomType(UUID roomTypeId, int roomPrice, String name, int capacity, boolean isActive){
+        this.roomTypeId = roomTypeId;
         this.roomPrice = roomPrice;
         this.name = name;
         this.capacity = capacity;
@@ -51,7 +53,7 @@ public class RoomType {
      * @param request the validated details of the new room type
      */
     public RoomType(ReviewNewRoomType request){
-        this.typeId = UUID.randomUUID();
+        this.roomTypeId = UUID.randomUUID();
         this.roomPrice = request.roomPrice();
         this.name = request.name();
         this.isActive = request.isActive();
@@ -60,12 +62,12 @@ public class RoomType {
     /**
      * @return the unique id of the room type
      */
-    public UUID getTypeId(){ return typeId; }
+    public UUID getRoomTypeId(){ return roomTypeId; }
 
     /**
-     * @param typeId the unique id of the room type
+     * @param roomTypeId the unique id of the room type
      */
-    public void setTypeId(UUID typeId) { this.typeId = typeId; }
+    public void setRoomTypeId(UUID roomTypeId) { this.roomTypeId = roomTypeId; }
 
     /**
      * @return the base price of the room

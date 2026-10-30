@@ -13,8 +13,8 @@ public interface BedRepository extends JpaRepository<Bed, UUID> {
     /**
      * Finds a bed type by its id.
      *
-     * @param typeId the id of the bed type
+     * @param bedId the id of the bed type
      * @return the bed type, or empty if none exists
      */
-    Optional<Bed> findByBedId(UUID typeId);
+    Optional<Bed> findByBedId(UUID bedId);
 }

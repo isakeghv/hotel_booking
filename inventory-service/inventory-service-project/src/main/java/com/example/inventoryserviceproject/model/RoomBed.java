@@ -28,11 +28,11 @@ public class RoomBed {
      * Creates a link between a room type and a bed type from a validated request.
      *
      * @param request the validated request containing the amount
-     * @param typeId  the id of the room type
+     * @param roomTypeId  the id of the room type
      * @param bedId   the id of the bed type
      */
-    public RoomBed(ReviewAddBedToRoom request,UUID typeId, UUID bedId){
-        this.id = new RoomBedsId(typeId, bedId);
+    public RoomBed(ReviewAddBedToRoom request,UUID roomTypeId, UUID bedId){
+        this.id = new RoomBedsId(roomTypeId, bedId);
         this.amount = request.amount();
     }
 
@@ -49,7 +49,7 @@ public class RoomBed {
     /**
      * @return the id of the room type
      */
-    public UUID getRoomTypeId() { return id.getTypeId(); }
+    public UUID getRoomTypeId() { return id.getRoomTypeId(); }
 
     /**
      * @return the number of this bed type in the room

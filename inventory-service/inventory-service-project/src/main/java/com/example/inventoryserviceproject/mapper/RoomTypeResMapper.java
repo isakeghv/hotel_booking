@@ -56,7 +56,7 @@ public class RoomTypeResMapper {
                 .toList();
 
         return new RoomTypeResponse(
-                info.getTypeId(),
+                info.getRoomTypeId(),
                 info.getRoomPrice(),
                 info.getName(),
                 info.getCapacity(),

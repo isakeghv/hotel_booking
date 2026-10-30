@@ -85,7 +85,7 @@ public class ImageService {
      *
      * @param newImgData the validated image metadata
      * @param newImage   the image file to upload
-     * @param typeId     the id of the room type the image belongs to
+     * @param roomTypeId     the id of the room type the image belongs to
      * @return a message confirming the upload
      * @throws NotFoundException         if the room type does not exist
      * @throws UnsupportedMediaException if the image type is not supported
@@ -94,15 +94,15 @@ public class ImageService {
     public String uploadNewImage(
             ReviewImageData newImgData,
             MultipartFile newImage,
-            UUID typeId
+            UUID roomTypeId
     ){
 
-        Optional<RoomType> optRoomType = roomTypesRepository.findByTypeId(typeId);
+        Optional<RoomType> optRoomType = roomTypesRepository.findByRoomTypeId(roomTypeId);
         if (optRoomType.isEmpty()) throw new NotFoundException("Room-type not found");
 
         String imageExtension = ImageUtils.getImageExtension(newImage);
         if ( imageExtension == null) throw new UnsupportedMediaException("Image-type not supported");
-        ImageData imageData = new ImageData(newImgData, imageExtension, typeId);
+        ImageData imageData = new ImageData(newImgData, imageExtension, roomTypeId);
 
         sendToImageMicroService(imageData.getFileName(), newImage);
 
@@ -121,6 +121,6 @@ public class ImageService {
      * @return the image metadata, or an empty list if there are none
      */
     public List<ImageData> getImageData(UUID roomTypeId){
-        return imageRepository.findAllByTypeId(roomTypeId);
+        return imageRepository.findAllByRoomTypeId(roomTypeId);
     }
 }

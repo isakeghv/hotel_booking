@@ -56,7 +56,7 @@ public class RoomIncludes {
     /**
      * @return the id of the room type
      */
-    public UUID getRoomTypeId(){ return id.getTypeId(); }
+    public UUID getRoomTypeId(){ return id.getRoomTypeId(); }
 
     /**
      * @return the id of the extra

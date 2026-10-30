@@ -69,7 +69,7 @@ public class RoomTypeService {
      * @return the total number of guests the room sleeps
      */
     private int getRoomCapacity(UUID roomId){
-        List<RoomBed> roomBeds = roomBedsRepository.findByIdTypeId(roomId);
+        List<RoomBed> roomBeds = roomBedsRepository.findByIdRoomTypeId(roomId);
 
         return roomBeds.stream()
                 .mapToInt(rb -> bedRepository.findByBedId(rb.getBedId())
@@ -85,7 +85,7 @@ public class RoomTypeService {
      * @return the list of bed types, possibly empty
      */
     private List<Bed> getRoomBeds(UUID roomId){
-        List<RoomBed> roomBeds = roomBedsRepository.findByIdTypeId(roomId);
+        List<RoomBed> roomBeds = roomBedsRepository.findByIdRoomTypeId(roomId);
         List<Bed> beds = new ArrayList<>();
 
         for ( RoomBed rb : roomBeds){
@@ -105,14 +105,14 @@ public class RoomTypeService {
      */
     public RoomTypeResponse getRoomType(UUID roomId){
 
-        Optional<RoomType> optRoom = roomTypesRepository.findByTypeId(roomId);
+        Optional<RoomType> optRoom = roomTypesRepository.findByRoomTypeId(roomId);
         if (optRoom.isEmpty()) throw new NotFoundException("Room-type not found");
 
         int roomCapacity = getRoomCapacity(roomId);
         RoomType room = optRoom.get();
         room.setCapacity(roomCapacity);
 
-        List<RoomBed> roomBeds = roomBedsRepository.findByIdTypeId(room.getTypeId());
+        List<RoomBed> roomBeds = roomBedsRepository.findByIdRoomTypeId(room.getRoomTypeId());
         List<Bed> beds = getRoomBeds(roomId);
         List<ImageData> imageData = imageService.getImageData(roomId);
 
@@ -128,7 +128,7 @@ public class RoomTypeService {
         List<RoomType> rooms = roomTypesRepository.findAll();
 
         for ( RoomType room: rooms){
-            int roomCapacity = getRoomCapacity(room.getTypeId());
+            int roomCapacity = getRoomCapacity(room.getRoomTypeId());
             room.setCapacity(roomCapacity);
         }
 

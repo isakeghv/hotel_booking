@@ -58,7 +58,7 @@ public class VariantService {
         boolean roomExists = roomTypesRepository.existsById(roomTypeId);
         if (!roomExists) throw new NotFoundException("Room-type not found");
 
-        boolean variantExists = variantRepository.existsByVariantNameAndTypeId(request.variantName(), roomTypeId);
+        boolean variantExists = variantRepository.existsByVariantNameAndRoomTypeId(request.variantName(), roomTypeId);
         if ( variantExists) throw new ConflictException("Variant-name already in use");
 
         RoomTypeVariant variant = new RoomTypeVariant(request, roomTypeId);

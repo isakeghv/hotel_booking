@@ -1,5 +1,6 @@
 package com.example.inventoryserviceproject.model;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
 
 import java.io.Serializable;
@@ -12,7 +13,8 @@ import java.util.UUID;
  */
 @Embeddable
 public class RoomBedsId implements Serializable {
-    private UUID typeId;
+    @Column(name = "type_id")
+    private UUID roomTypeId;
     private UUID bedId;
 
     /**
@@ -23,23 +25,23 @@ public class RoomBedsId implements Serializable {
     /**
      * Creates a key from a room type id and a bed id.
      *
-     * @param typeId the id of the room type
+     * @param roomTypeId the id of the room type
      * @param bedId  the id of the bed type
      */
-    public RoomBedsId(UUID typeId, UUID bedId){
-        this.typeId = typeId;
+    public RoomBedsId(UUID roomTypeId, UUID bedId){
+        this.roomTypeId = roomTypeId;
         this.bedId = bedId;
     }
 
     /**
      * @return the id of the room type
      */
-    public UUID getTypeId() { return typeId; }
+    public UUID getRoomTypeId() { return roomTypeId; }
 
     /**
-     * @param typeId the id of the room type
+     * @param roomTypeId the id of the room type
      */
-    public void setTypeId(UUID typeId) { this.typeId = typeId; }
+    public void setRoomTypeId(UUID roomTypeId) { this.roomTypeId = roomTypeId; }
 
     /**
      * @return the id of the bed type
@@ -57,7 +59,7 @@ public class RoomBedsId implements Serializable {
     public boolean equals(Object o){
         if ( this == o) return true;
         if ( !(o instanceof RoomBedsId that)) return false;
-        return Objects.equals(typeId, that.typeId) && Objects.equals(bedId, that.bedId);
+        return Objects.equals(roomTypeId, that.roomTypeId) && Objects.equals(bedId, that.bedId);
     }
 
     /**
@@ -68,6 +70,6 @@ public class RoomBedsId implements Serializable {
      */
     @Override
     public int hashCode(){
-        return Objects.hash(typeId, bedId);
+        return Objects.hash(roomTypeId, bedId);
     }
 }

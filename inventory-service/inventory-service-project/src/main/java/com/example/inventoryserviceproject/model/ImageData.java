@@ -1,6 +1,7 @@
 package com.example.inventoryserviceproject.model;
 
 import com.example.inventoryserviceproject.dto.ReviewImageData;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
@@ -16,7 +17,8 @@ import java.util.UUID;
 public class ImageData {
     @Id
     private UUID imageId;
-    private UUID typeId;
+    @Column(name = "type_id")
+    private UUID roomTypeId;
     private String fileName;
     private String imageText;
     private String altText;
@@ -32,13 +34,13 @@ public class ImageData {
      *
      * @param imgData       the validated image metadata
      * @param fileExtension the file extension without a dot, e.g. {@code png}
-     * @param typeId        the id of the room type the image belongs to
+     * @param roomTypeId        the id of the room type the image belongs to
      */
-    public ImageData(ReviewImageData imgData, String fileExtension, UUID typeId){
+    public ImageData(ReviewImageData imgData, String fileExtension, UUID roomTypeId){
         UUID imageId = UUID.randomUUID();
 
         this.imageId = imageId;
-        this.typeId = typeId;
+        this.roomTypeId = roomTypeId;
         this.fileName = imageId + "." + fileExtension;
         this.imageText = imgData.imageText();
         this.altText = imgData.altText();
@@ -57,12 +59,12 @@ public class ImageData {
     /**
      * @return the id of the room type the image belongs to
      */
-    public UUID getTypeId() { return typeId; }
+    public UUID getRoomTypeId() { return roomTypeId; }
 
     /**
-     * @param typeId the id of the room type the image belongs to
+     * @param roomTypeId the id of the room type the image belongs to
      */
-    public void setTypeId(UUID typeId) { this.typeId = typeId; }
+    public void setRoomTypeId(UUID roomTypeId) { this.roomTypeId = roomTypeId; }
 
     /**
      * @return the stored file name, including extension

@@ -1,5 +1,6 @@
 package com.example.inventoryserviceproject.model;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
 
 import java.io.Serializable;
@@ -12,6 +13,7 @@ import java.util.UUID;
  */
 @Embeddable
 public class RoomIncludesId implements Serializable {
+    @Column(name = "type_id")
     private UUID roomTypeId;
     private UUID extraId;
 
@@ -24,17 +26,17 @@ public class RoomIncludesId implements Serializable {
      * Creates a key from a room type id and an extra id.
      *
      * @param roomTypeId the id of the room type
-     * @param bedId      the id of the extra (despite the parameter name)
+     * @param extraId    the id of the extra
      */
-    public RoomIncludesId(UUID roomTypeId, UUID bedId){
+    public RoomIncludesId(UUID roomTypeId, UUID extraId){
         this.roomTypeId = roomTypeId;
-        this.extraId = bedId;
+        this.extraId = extraId;
     }
 
     /**
      * @return the id of the room type
      */
-    public UUID getTypeId() { return roomTypeId; }
+    public UUID getRoomTypeId() { return roomTypeId; }
 
     /**
      * @return the id of the extra
@@ -42,9 +44,9 @@ public class RoomIncludesId implements Serializable {
     public UUID getExtraId() { return extraId; }
 
     /**
-     * @param typeId the id of the room type
+     * @param roomTypeId the id of the room type
      */
-    public void setTypeId(UUID typeId) { this.roomTypeId = typeId; }
+    public void setRoomTypeId(UUID roomTypeId) { this.roomTypeId = roomTypeId; }
 
     /**
      * Compares this key to another object. Two keys are equal when both the

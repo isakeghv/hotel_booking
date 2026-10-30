@@ -14,8 +14,8 @@ public interface RoomTypesRepository extends JpaRepository<RoomType, UUID> {
     /**
      * Finds a room type by its id.
      *
-     * @param typeId the id of the room type
+     * @param roomTypeId the id of the room type
      * @return the room type, or empty if none exists
      */
-    Optional<RoomType> findByTypeId(UUID typeId);
+    Optional<RoomType> findByRoomTypeId(UUID roomTypeId);
 }
