@@ -108,12 +108,18 @@ gateway:
     - path: /inventory/roomtypes/{roomTypeId}/variants
       methods: [POST]
       allowed-levels: [2, 3]
-    - path: /roomtypes/{roomTypeId}/room
+    - path: /inventory/roomtypes/{roomTypeId}/room
       methods: [POST]
       allowed-levels: [2, 3]
     - path: /inventory/rooms/{roomId}/occupied
       methods: [POST]
       allowed-levels: [1, 2, 3]
+    - path: /inventory/rooms/{roomId}/occupied/{occupiedId}
+      methods: [ DELETE ]
+      allowed-levels: [1, 2, 3 ]
+    - path: /inventory/occupied/employee
+      methods: [ GET ]
+      allowed-levels: [1, 2, 3 ]
     - path: /inventory/variants/{variantId}/extras/{extrasId}
       methods: [POST]
       allowed-levels: [2, 3]
