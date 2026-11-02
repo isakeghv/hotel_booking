@@ -1,13 +1,16 @@
 package com.example.inventoryserviceproject.service;
 
+import com.example.inventoryserviceproject.dto.request.ReviewNewRoom;
 import com.example.inventoryserviceproject.dto.request.ReviewOccupyRoom;
 import com.example.inventoryserviceproject.exception.ConflictException;
 import com.example.inventoryserviceproject.exception.InternalServerException;
 import com.example.inventoryserviceproject.exception.NotFoundException;
 import com.example.inventoryserviceproject.exception.UnauthorizedException;
 import com.example.inventoryserviceproject.model.OccupiedRoom;
+import com.example.inventoryserviceproject.model.Room;
 import com.example.inventoryserviceproject.repository.OccupiedRoomRepository;
 import com.example.inventoryserviceproject.repository.RoomRepository;
+import com.example.inventoryserviceproject.repository.RoomTypesRepository;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -22,16 +25,52 @@ import java.util.UUID;
 public class RoomService {
     private final RoomRepository roomRepository;
     private final OccupiedRoomRepository occupiedRoomRepository;
+    private final RoomTypesRepository roomTypesRepository;
 
     /**
      * Creates the service with the repositories it uses.
      *
      * @param roomRepository         repository for single rooms
      * @param occupiedRoomRepository repository for the periods rooms are unavailable
+     * @param roomTypesRepository    repository for room types
      */
-    public RoomService(RoomRepository roomRepository, OccupiedRoomRepository occupiedRoomRepository){
+    public RoomService(
+            RoomRepository roomRepository,
+            OccupiedRoomRepository occupiedRoomRepository,
+            RoomTypesRepository roomTypesRepository
+    ){
         this.roomRepository = roomRepository;
         this.occupiedRoomRepository = occupiedRoomRepository;
+        this.roomTypesRepository = roomTypesRepository;
+    }
+
+    /**
+     * Creates a new room belonging to a room type. Room numbers are unique
+     * across the whole hotel, not only within the room type.
+     *
+     * @param request    the validated details of the new room
+     * @param roomTypeId the id of the room type the room belongs to
+     * @return the created room
+     * @throws NotFoundException       if the room type does not exist
+     * @throws ConflictException       if a room with the room number already exists
+     * @throws InternalServerException if the room could not be saved
+     */
+    public Room createRoom(ReviewNewRoom request, UUID roomTypeId){
+        boolean roomTypeExists = roomTypesRepository.existsById(roomTypeId);
+        if (!roomTypeExists) throw new NotFoundException("The selected room type does not exist");
+
+        boolean roomNumberExists = roomRepository.existsByRoomNumber(request.roomNumber());
+        if ( roomNumberExists) throw new ConflictException("Room number " + request.roomNumber() + " is already in use");
+
+        // The unique constraint on room_number catches two requests creating the same room number at the same time
+        try {
+            Room room = new Room(request, roomTypeId);
+            return roomRepository.saveAndFlush(room);
+        } catch (DataIntegrityViolationException e){
+            throw new ConflictException("Room number " + request.roomNumber() + " is already in use");
+        } catch (DataAccessException e){
+            throw new InternalServerException("Something went wrong while creating the room. Please try again");
+        }
     }
 
     /**

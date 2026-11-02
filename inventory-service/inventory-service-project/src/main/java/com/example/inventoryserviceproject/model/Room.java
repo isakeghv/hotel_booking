@@ -1,5 +1,6 @@
 package com.example.inventoryserviceproject.model;
 
+import com.example.inventoryserviceproject.dto.request.ReviewNewRoom;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -25,6 +26,19 @@ public class Room {
      * Creates an empty room. Required by JPA.
      */
     public Room(){}
+
+    /**
+     * Creates a new room from a validated request, with a randomly generated id.
+     *
+     * @param request    the validated details of the new room
+     * @param roomTypeId the id of the room type the room belongs to
+     */
+    public Room(ReviewNewRoom request, UUID roomTypeId){
+        this.roomId = UUID.randomUUID();
+        this.roomTypeId = roomTypeId;
+        this.roomNumber = request.roomNumber();
+        this.isActive = request.isActive();
+    }
 
     /**
      * @return the unique id of the room

@@ -1,8 +1,10 @@
 package com.example.inventoryserviceproject.controller;
 
 import com.example.inventoryserviceproject.dto.request.ReviewAddBedToRoom;
+import com.example.inventoryserviceproject.dto.request.ReviewNewRoom;
 import com.example.inventoryserviceproject.dto.request.ReviewNewRoomType;
 import com.example.inventoryserviceproject.dto.request.ReviewOccupyRoom;
+import com.example.inventoryserviceproject.model.Room;
 import com.example.inventoryserviceproject.model.RoomType;
 import com.example.inventoryserviceproject.dto.response.RoomTypeResponse;
 import com.example.inventoryserviceproject.service.RoomBedsService;
@@ -110,6 +112,19 @@ public class RoomController {
         return ClientResponse.okEmpty();
     }
 
+
+    /**
+     * Creates a new room (e.g. a room number) belonging to a room type.
+     *
+     * @param request    the validated details of the new room
+     * @param roomTypeId the id of the room type the room belongs to
+     * @return a response with the created room
+     */
+    @PostMapping("/roomtypes/{roomTypeId}/room")
+    public ResponseEntity<Map<String, Room>> createRoom(@Valid @RequestBody ReviewNewRoom request, @PathVariable UUID roomTypeId){
+        Room room = roomService.createRoom(request, roomTypeId);
+        return ClientResponse.ok("room", room);
+    }
 
     /**
      * Sets a specific room (not room type) as unavailable for a period of
