@@ -1,6 +1,6 @@
 package com.example.inventoryserviceproject.model;
 
-import com.example.inventoryserviceproject.dto.ReviewNewRoomType;
+import com.example.inventoryserviceproject.dto.request.ReviewNewRoomType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;

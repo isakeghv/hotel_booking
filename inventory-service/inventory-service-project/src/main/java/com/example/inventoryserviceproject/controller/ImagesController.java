@@ -1,6 +1,6 @@
 package com.example.inventoryserviceproject.controller;
 
-import com.example.inventoryserviceproject.dto.ReviewImageData;
+import com.example.inventoryserviceproject.dto.request.ReviewImageData;
 import com.example.inventoryserviceproject.service.ImageService;
 import com.example.inventoryserviceproject.utils.ClientResponse;
 import jakarta.validation.Valid;

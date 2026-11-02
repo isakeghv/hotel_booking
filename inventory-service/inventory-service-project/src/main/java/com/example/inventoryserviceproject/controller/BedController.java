@@ -1,6 +1,6 @@
 package com.example.inventoryserviceproject.controller;
 
-import com.example.inventoryserviceproject.dto.ReviewNewBedType;
+import com.example.inventoryserviceproject.dto.request.ReviewNewBedType;
 import com.example.inventoryserviceproject.model.Bed;
 import com.example.inventoryserviceproject.service.BedService;
 import com.example.inventoryserviceproject.utils.ClientResponse;

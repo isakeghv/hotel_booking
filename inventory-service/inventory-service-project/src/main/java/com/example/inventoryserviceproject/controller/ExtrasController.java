@@ -1,6 +1,6 @@
 package com.example.inventoryserviceproject.controller;
 
-import com.example.inventoryserviceproject.dto.ReviewNewExtra;
+import com.example.inventoryserviceproject.dto.request.ReviewNewExtra;
 import com.example.inventoryserviceproject.model.Extra;
 import com.example.inventoryserviceproject.service.ExtrasService;
 import com.example.inventoryserviceproject.utils.ClientResponse;
@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 /**
  * REST controller for managing extras, the add-on items that can be

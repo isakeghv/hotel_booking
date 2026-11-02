@@ -1,6 +1,6 @@
 package com.example.inventoryserviceproject.service;
 
-import com.example.inventoryserviceproject.dto.ReviewImageData;
+import com.example.inventoryserviceproject.dto.request.ReviewImageData;
 import com.example.inventoryserviceproject.exception.InternalServerException;
 import com.example.inventoryserviceproject.exception.NotFoundException;
 import com.example.inventoryserviceproject.exception.UnsupportedMediaException;

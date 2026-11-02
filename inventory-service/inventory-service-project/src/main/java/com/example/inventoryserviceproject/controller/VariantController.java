@@ -1,8 +1,8 @@
 package com.example.inventoryserviceproject.controller;
 
 
-import com.example.inventoryserviceproject.dto.ReviewLinkExtraToVariant;
-import com.example.inventoryserviceproject.dto.ReviewNewRoomVariant;
+import com.example.inventoryserviceproject.dto.request.ReviewLinkExtraToVariant;
+import com.example.inventoryserviceproject.dto.request.ReviewNewRoomVariant;
 import com.example.inventoryserviceproject.service.VariantService;
 import com.example.inventoryserviceproject.utils.ClientResponse;
 import jakarta.validation.Valid;

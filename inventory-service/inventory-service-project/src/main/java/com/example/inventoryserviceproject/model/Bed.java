@@ -1,7 +1,7 @@
 package com.example.inventoryserviceproject.model;
 
 
-import com.example.inventoryserviceproject.dto.ReviewNewBedType;
+import com.example.inventoryserviceproject.dto.request.ReviewNewBedType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;

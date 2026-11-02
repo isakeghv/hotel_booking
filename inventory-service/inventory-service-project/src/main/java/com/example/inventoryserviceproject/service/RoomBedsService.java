@@ -1,6 +1,6 @@
 package com.example.inventoryserviceproject.service;
 
-import com.example.inventoryserviceproject.dto.ReviewAddBedToRoom;
+import com.example.inventoryserviceproject.dto.request.ReviewAddBedToRoom;
 import com.example.inventoryserviceproject.exception.NotFoundException;
 import com.example.inventoryserviceproject.model.*;
 import com.example.inventoryserviceproject.dto.response.RoomTypeResponse;

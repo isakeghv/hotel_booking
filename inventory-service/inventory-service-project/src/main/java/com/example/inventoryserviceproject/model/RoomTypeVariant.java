@@ -1,7 +1,7 @@
 package com.example.inventoryserviceproject.model;
 
 
-import com.example.inventoryserviceproject.dto.ReviewNewRoomVariant;
+import com.example.inventoryserviceproject.dto.request.ReviewNewRoomVariant;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;

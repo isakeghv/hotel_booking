@@ -1,7 +1,7 @@
 package com.example.inventoryserviceproject.service;
 
-import com.example.inventoryserviceproject.dto.ReviewLinkExtraToVariant;
-import com.example.inventoryserviceproject.dto.ReviewNewRoomVariant;
+import com.example.inventoryserviceproject.dto.request.ReviewLinkExtraToVariant;
+import com.example.inventoryserviceproject.dto.request.ReviewNewRoomVariant;
 import com.example.inventoryserviceproject.exception.ConflictException;
 import com.example.inventoryserviceproject.exception.InternalServerException;
 import com.example.inventoryserviceproject.exception.NotFoundException;

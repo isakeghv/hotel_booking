@@ -1,6 +1,6 @@
 package com.example.inventoryserviceproject.model;
 
-import com.example.inventoryserviceproject.dto.ReviewAddBedToRoom;
+import com.example.inventoryserviceproject.dto.request.ReviewAddBedToRoom;
 import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;

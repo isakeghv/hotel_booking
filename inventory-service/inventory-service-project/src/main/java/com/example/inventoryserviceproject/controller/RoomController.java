@@ -1,10 +1,12 @@
 package com.example.inventoryserviceproject.controller;
 
-import com.example.inventoryserviceproject.dto.ReviewAddBedToRoom;
-import com.example.inventoryserviceproject.dto.ReviewNewRoomType;
+import com.example.inventoryserviceproject.dto.request.ReviewAddBedToRoom;
+import com.example.inventoryserviceproject.dto.request.ReviewNewRoomType;
+import com.example.inventoryserviceproject.dto.request.ReviewOccupyRoom;
 import com.example.inventoryserviceproject.model.RoomType;
 import com.example.inventoryserviceproject.dto.response.RoomTypeResponse;
 import com.example.inventoryserviceproject.service.RoomBedsService;
+import com.example.inventoryserviceproject.service.RoomService;
 import com.example.inventoryserviceproject.service.RoomTypeService;
 import com.example.inventoryserviceproject.utils.ClientResponse;
 import jakarta.validation.Valid;
@@ -24,16 +26,19 @@ import java.util.UUID;
 public class RoomController {
     private final RoomTypeService roomTypeService;
     private final RoomBedsService roomBedsService;
+    private final RoomService roomService;
 
     /**
      * Creates the controller with the services it delegates to.
      *
      * @param roomTypeService service containing the room type business logic
      * @param roomBedsService service managing the beds in each room type
+     * @param roomService     service containing the single room business logic
      */
-    public RoomController(RoomTypeService roomTypeService, RoomBedsService roomBedsService){
+    public RoomController(RoomTypeService roomTypeService, RoomBedsService roomBedsService, RoomService roomService){
         this.roomTypeService = roomTypeService;
         this.roomBedsService = roomBedsService;
+        this.roomService = roomService;
     }
 
     /**
@@ -102,6 +107,28 @@ public class RoomController {
             boolean showAmount
     ){
         roomTypeService.linkExtraToRoom(extraId, roomTypeId, amount, showAmount);
+        return ClientResponse.okEmpty();
+    }
+
+
+    /**
+     * Sets a specific room (not room type) as unavailable for a period of
+     * time. The caller's permission level decides whether the period is
+     * stored as a booking or as the room being set as unavailable, see
+     * {@link RoomService#occupyRoom}.
+     *
+     * @param request         the validated period the room is unavailable
+     * @param roomId          the id of the room
+     * @param permissionLevel the caller's permission level, added by the API gateway
+     * @return an empty successful response
+     */
+    @PostMapping("/rooms/{roomId}/occupied")
+    public ResponseEntity<Map<String, String>> setRoomToUnavailable(
+            @Valid @RequestBody ReviewOccupyRoom request,
+            @PathVariable UUID roomId,
+            @RequestHeader("X-Permission-Level") int permissionLevel
+    ){
+        roomService.occupyRoom(request, roomId, permissionLevel);
         return ClientResponse.okEmpty();
     }
 }

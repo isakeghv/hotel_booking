@@ -1,6 +1,6 @@
 package com.example.inventoryserviceproject.model;
 
-import com.example.inventoryserviceproject.dto.ReviewImageData;
+import com.example.inventoryserviceproject.dto.request.ReviewImageData;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;

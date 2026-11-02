@@ -1,4 +1,4 @@
-package com.example.inventoryserviceproject.dto;
+package com.example.inventoryserviceproject.dto.request;
 
 public record ReviewNewRoomVariant(
 
