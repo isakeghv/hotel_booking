@@ -6,6 +6,7 @@ import com.example.inventoryserviceproject.dto.request.ReviewNewRoomType;
 import com.example.inventoryserviceproject.dto.request.ReviewOccupyRoom;
 import com.example.inventoryserviceproject.model.Room;
 import com.example.inventoryserviceproject.model.RoomType;
+import com.example.inventoryserviceproject.dto.response.OccupiedRoomResponse;
 import com.example.inventoryserviceproject.dto.response.RoomTypeResponse;
 import com.example.inventoryserviceproject.service.RoomBedsService;
 import com.example.inventoryserviceproject.service.RoomService;
@@ -163,5 +164,18 @@ public class RoomController {
     ){
         roomService.releaseRoom(roomId, occupiedId);
         return ClientResponse.okEmpty();
+    }
+
+    /**
+     * Retrieves the periods in which rooms are set as unavailable by an
+     * employee, manager or owner, that are either ongoing or in the future.
+     * Periods caused by bookings are not included.
+     *
+     * @return a response containing the periods, with their room and room type
+     */
+    @GetMapping("/occupied/employee")
+    public ResponseEntity<Map<String, List<OccupiedRoomResponse>>> getEmployeeOccupations(){
+        List<OccupiedRoomResponse> occupations = roomService.getEmployeeOccupations();
+        return ClientResponse.ok("occupations", occupations);
     }
 }

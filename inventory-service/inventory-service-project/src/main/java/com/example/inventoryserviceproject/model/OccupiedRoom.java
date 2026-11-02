@@ -1,8 +1,6 @@
 package com.example.inventoryserviceproject.model;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -17,7 +15,15 @@ import java.util.UUID;
 public class OccupiedRoom {
     @Id
     private UUID occupiedId;
+    // Explicit name, so Hibernate sees this and the relation below as the same column
+    @Column(name = "room_id")
     private UUID roomId;
+
+    // Read-only relation on the same column as roomId, so the room can be
+    // fetched in the same query (see OccupiedRoomRepository). roomId is still what is written.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "room_id", insertable = false, updatable = false)
+    private Room room;
     private LocalDateTime fromTime;
     private LocalDateTime toTime;
     private boolean booked;
@@ -52,6 +58,13 @@ public class OccupiedRoom {
      * @return the id of the room
      */
     public UUID getRoomId() { return roomId; }
+
+    /**
+     * Only set on periods loaded from the database, not on newly created ones.
+     *
+     * @return the room that is unavailable
+     */
+    public Room getRoom() { return room; }
 
     /**
      * @return when the period starts

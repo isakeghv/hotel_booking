@@ -1,10 +1,8 @@
 package com.example.inventoryserviceproject.model;
 
 import com.example.inventoryserviceproject.dto.request.ReviewNewRoom;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.persistence.*;
 
 import java.util.UUID;
 
@@ -19,6 +17,14 @@ public class Room {
     private UUID roomId;
     @Column(name = "type_id")
     private UUID roomTypeId;
+
+    // Read-only relation on the same column as roomTypeId, so the room type can be
+    // fetched in the same query (see OccupiedRoomRepository). roomTypeId is still what is written.
+    // Ignored in JSON, as it is loaded lazily and is not part of the room's response.
+    @JsonIgnore
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "type_id", insertable = false, updatable = false)
+    private RoomType roomType;
     private int roomNumber;
     private boolean isActive;
 
@@ -49,6 +55,14 @@ public class Room {
      * @return the id of the room type the room belongs to
      */
     public UUID getRoomTypeId() { return roomTypeId; }
+
+    /**
+     * Only set on rooms loaded from the database, not on newly created ones.
+     *
+     * @return the room type the room belongs to
+     */
+    @JsonIgnore
+    public RoomType getRoomType() { return roomType; }
 
     /**
      * @return the room number

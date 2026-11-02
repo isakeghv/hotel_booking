@@ -1,9 +1,11 @@
 package com.example.inventoryserviceproject.repository;
 
 import com.example.inventoryserviceproject.model.OccupiedRoom;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -23,4 +25,16 @@ public interface OccupiedRoomRepository extends JpaRepository<OccupiedRoom, UUID
      * @return true if an overlapping period exists, false otherwise
      */
     boolean existsByRoomIdAndFromTimeLessThanAndToTimeGreaterThan(UUID roomId, LocalDateTime toTime, LocalDateTime fromTime);
+
+    /**
+     * Finds the periods that are either ongoing or in the future, meaning they
+     * end after the given time, sorted by when they start. The room and its
+     * room type are fetched in the same query.
+     *
+     * @param booked true for periods caused by bookings, false for periods set by an employee, manager or owner
+     * @param now    the current time
+     * @return the matching periods, or an empty list if there are none
+     */
+    @EntityGraph(attributePaths = {"room", "room.roomType"})
+    List<OccupiedRoom> findAllByBookedAndToTimeAfterOrderByFromTimeAsc(boolean booked, LocalDateTime now);
 }

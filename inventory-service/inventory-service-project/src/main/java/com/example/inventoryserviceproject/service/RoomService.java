@@ -2,10 +2,12 @@ package com.example.inventoryserviceproject.service;
 
 import com.example.inventoryserviceproject.dto.request.ReviewNewRoom;
 import com.example.inventoryserviceproject.dto.request.ReviewOccupyRoom;
+import com.example.inventoryserviceproject.dto.response.OccupiedRoomResponse;
 import com.example.inventoryserviceproject.exception.ConflictException;
 import com.example.inventoryserviceproject.exception.InternalServerException;
 import com.example.inventoryserviceproject.exception.NotFoundException;
 import com.example.inventoryserviceproject.exception.UnauthorizedException;
+import com.example.inventoryserviceproject.mapper.OccupiedRoomResMapper;
 import com.example.inventoryserviceproject.model.OccupiedRoom;
 import com.example.inventoryserviceproject.model.Room;
 import com.example.inventoryserviceproject.repository.OccupiedRoomRepository;
@@ -16,6 +18,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -28,6 +32,7 @@ public class RoomService {
     private final RoomRepository roomRepository;
     private final OccupiedRoomRepository occupiedRoomRepository;
     private final RoomTypesRepository roomTypesRepository;
+    private final OccupiedRoomResMapper occupiedRoomResMapper;
 
     /**
      * Creates the service with the repositories it uses.
@@ -35,15 +40,18 @@ public class RoomService {
      * @param roomRepository         repository for single rooms
      * @param occupiedRoomRepository repository for the periods rooms are unavailable
      * @param roomTypesRepository    repository for room types
+     * @param occupiedRoomResMapper  mapper that builds the occupied room response
      */
     public RoomService(
             RoomRepository roomRepository,
             OccupiedRoomRepository occupiedRoomRepository,
-            RoomTypesRepository roomTypesRepository
+            RoomTypesRepository roomTypesRepository,
+            OccupiedRoomResMapper occupiedRoomResMapper
     ){
         this.roomRepository = roomRepository;
         this.occupiedRoomRepository = occupiedRoomRepository;
         this.roomTypesRepository = roomTypesRepository;
+        this.occupiedRoomResMapper = occupiedRoomResMapper;
     }
 
     /**
@@ -166,5 +174,22 @@ public class RoomService {
         } catch (DataAccessException e){
             throw new InternalServerException("Something went wrong while making the room available. Please try again");
         }
+    }
+
+    /**
+     * Retrieves the periods set by an employee, manager or owner in which rooms
+     * are unavailable, that are either ongoing or in the future. Each period
+     * includes the room and room type it belongs to.
+     *
+     * @return the periods sorted by when they start, or an empty list if there are none
+     */
+    public List<OccupiedRoomResponse> getEmployeeOccupations(){
+        // Staff-set only (booked = false), ending after now -> ongoing + future.
+        // Room and room type are joined in the same query (@EntityGraph)
+        List<OccupiedRoom> occupations = occupiedRoomRepository.findAllByBookedAndToTimeAfterOrderByFromTimeAsc(false, LocalDateTime.now());
+
+        return occupations.stream()
+                .map(occupiedRoomResMapper::toResponse)
+                .toList();
     }
 }
