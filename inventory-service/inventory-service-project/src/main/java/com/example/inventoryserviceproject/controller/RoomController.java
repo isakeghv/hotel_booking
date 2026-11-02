@@ -146,4 +146,22 @@ public class RoomController {
         roomService.occupyRoom(request, roomId, permissionLevel);
         return ClientResponse.okEmpty();
     }
+
+    /**
+     * Makes a specific room available again, by removing a period in which it
+     * was set as unavailable by an employee, manager or owner. Periods caused
+     * by a booking are refused, see {@link RoomService#releaseRoom}.
+     *
+     * @param roomId     the id of the room
+     * @param occupiedId the id of the period to remove
+     * @return an empty successful response
+     */
+    @DeleteMapping("/rooms/{roomId}/occupied/{occupiedId}")
+    public ResponseEntity<Map<String, String>> setRoomToAvailable(
+            @PathVariable UUID roomId,
+            @PathVariable UUID occupiedId
+    ){
+        roomService.releaseRoom(roomId, occupiedId);
+        return ClientResponse.okEmpty();
+    }
 }

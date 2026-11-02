@@ -14,7 +14,9 @@ import com.example.inventoryserviceproject.repository.RoomTypesRepository;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -116,6 +118,53 @@ public class RoomService {
             throw new ConflictException("Room is unavailable during this period");
         } catch (DataAccessException e){
             throw new InternalServerException("Internal server error. Failed to set room as unavailable");
+        }
+    }
+
+    /**
+     * Makes a room available again by removing a period in which it is unavailable.
+     *
+     * <p>This is the safety net for {@link #deleteOccupation}: it only allows
+     * removing periods set by an employee, manager or owner ({@code booked} is
+     * false). Periods caused by a booking are refused, so a booked room cannot be
+     * made available without the booking being changed, which would allow
+     * double bookings.
+     *
+     * <p>Transactional so the check and the delete run as one unit.
+     *
+     * @param roomId     the id of the room
+     * @param occupiedId the id of the period to remove
+     * @throws NotFoundException       if the period does not exist for the room
+     * @throws ConflictException       if the period is caused by a booking
+     * @throws InternalServerException if the period could not be removed
+     */
+    @Transactional
+    public void releaseRoom(UUID roomId, UUID occupiedId){
+        Optional<OccupiedRoom> optOccupied = occupiedRoomRepository.findById(occupiedId);
+        if (optOccupied.isEmpty() || !optOccupied.get().getRoomId().equals(roomId)){
+            throw new NotFoundException("This room is not set as unavailable for the selected period");
+        }
+
+        if (optOccupied.get().getBooked()){
+            throw new ConflictException("The room is booked by a customer for this period, and cannot be made available here");
+        }
+
+        deleteOccupation(occupiedId);
+    }
+
+    /**
+     * Removes a period in which a room is unavailable, regardless of whether it
+     * was caused by a booking. Private, so it is only used through methods that
+     * first check whether the removal is allowed, such as {@link #releaseRoom}.
+     *
+     * @param occupiedId the id of the period to remove
+     * @throws InternalServerException if the period could not be removed
+     */
+    private void deleteOccupation(UUID occupiedId){
+        try {
+            occupiedRoomRepository.deleteById(occupiedId);
+        } catch (DataAccessException e){
+            throw new InternalServerException("Something went wrong while making the room available. Please try again");
         }
     }
 }
