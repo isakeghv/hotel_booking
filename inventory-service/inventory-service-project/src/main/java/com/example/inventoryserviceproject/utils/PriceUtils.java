@@ -50,4 +50,15 @@ public final class PriceUtils {
     public static int total(int roomTotal, int variantTotal){
         return roomTotal + variantTotal;
     }
+
+    /**
+     * @param extraPrice   the extra's price per unit
+     * @param isPriceFixed true if the price is per stay, false if per night
+     * @param amount       the number of units
+     * @param nights       the number of nights
+     * @return the price of the extra for the whole stay
+     */
+    public static int extraTotal(int extraPrice, boolean isPriceFixed, int amount, int nights){
+        return isPriceFixed ? extraPrice * amount : extraPrice * amount * nights;
+    }
 }

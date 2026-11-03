@@ -3,15 +3,20 @@ package com.example.inventoryserviceproject.service;
 import com.example.inventoryserviceproject.cache.CartItem;
 import com.example.inventoryserviceproject.cache.ReservedCache;
 import com.example.inventoryserviceproject.dto.request.ReviewAvailabilityQuery;
+import com.example.inventoryserviceproject.dto.request.ReviewExtraQuery;
 import com.example.inventoryserviceproject.dto.response.AvailabilityResponse;
+import com.example.inventoryserviceproject.dto.response.ExtraAvailabilityResponse;
 import com.example.inventoryserviceproject.exception.ConflictException;
 import com.example.inventoryserviceproject.exception.InternalServerException;
 import com.example.inventoryserviceproject.exception.NotFoundException;
 import com.example.inventoryserviceproject.mapper.AvailabilityResMapper;
+import com.example.inventoryserviceproject.mapper.ExtraAvailabilityResMapper;
+import com.example.inventoryserviceproject.model.Extra;
 import com.example.inventoryserviceproject.model.OccupiedRoom;
 import com.example.inventoryserviceproject.model.Room;
 import com.example.inventoryserviceproject.model.RoomType;
 import com.example.inventoryserviceproject.model.RoomTypeVariant;
+import com.example.inventoryserviceproject.repository.ExtraRepository;
 import com.example.inventoryserviceproject.repository.OccupiedRoomRepository;
 import com.example.inventoryserviceproject.repository.RoomRepository;
 import com.example.inventoryserviceproject.repository.VariantRepository;
@@ -23,7 +28,9 @@ import org.springframework.stereotype.Service;
 
 import java.time.*;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -42,6 +49,8 @@ public class AvailabilityService {
     private final OccupiedRoomRepository occupiedRoomRepository;
     private final ReservedCache reservedCache;
     private final AvailabilityResMapper availabilityResMapper;
+    private final ExtraRepository extraRepository;
+    private final ExtraAvailabilityResMapper extraAvailabilityResMapper;
     private final LocalTime checkInTime;
     private final LocalTime checkOutTime;
 
@@ -53,6 +62,8 @@ public class AvailabilityService {
      * @param occupiedRoomRepository repository for the periods rooms are unavailable
      * @param reservedCache         cache holding rooms in users' carts
      * @param availabilityResMapper mapper that builds the availability response
+     * @param extraRepository       repository for extras
+     * @param extraAvailabilityResMapper mapper that builds the extra availability response
      * @param checkInTime           the hotel's check-in time, e.g. 15:00
      * @param checkOutTime          the hotel's check-out time, e.g. 12:00
      */
@@ -62,6 +73,8 @@ public class AvailabilityService {
             OccupiedRoomRepository occupiedRoomRepository,
             ReservedCache reservedCache,
             AvailabilityResMapper availabilityResMapper,
+            ExtraRepository extraRepository,
+            ExtraAvailabilityResMapper extraAvailabilityResMapper,
             @Value("${hotel.checkin.time}") String checkInTime,
             @Value("${hotel.checkout.time}") String checkOutTime
     ){
@@ -70,6 +83,8 @@ public class AvailabilityService {
         this.occupiedRoomRepository = occupiedRoomRepository;
         this.reservedCache = reservedCache;
         this.availabilityResMapper = availabilityResMapper;
+        this.extraRepository = extraRepository;
+        this.extraAvailabilityResMapper = extraAvailabilityResMapper;
         this.checkInTime = LocalTime.parse(checkInTime);
         this.checkOutTime = LocalTime.parse(checkOutTime);
     }
@@ -130,6 +145,48 @@ public class AvailabilityService {
             throw new ConflictException("The rooms were just reserved by someone else. Please try again");
         } catch (RedisConnectionFailureException e){
             throw new InternalServerException("Reservations are temporarily unavailable. Please try again");
+        }
+    }
+
+    /**
+     * Checks that an extra can be added to a booking, and prices it for the
+     * user's stay. Nothing is stored in the cache, as extras are not limited.
+     *
+     * <p>The stay is read from the user's cart, from the earliest check-in to the
+     * latest check-out, so the booking-service does not need to send the dates.
+     * Extras with a fixed price are priced per unit, others per unit per night.
+     *
+     * @param userId  the id of the user whose cart the stay is read from
+     * @param extraId the id of the extra
+     * @param query   the validated amount of the extra
+     * @return the extra with its price for the stay
+     * @throws NotFoundException       if the extra does not exist or is not active
+     * @throws ConflictException       if the extra cannot be added to a booking, or the cart has no rooms
+     * @throws InternalServerException if the cache cannot be reached
+     */
+    public ExtraAvailabilityResponse verifyExtra(UUID userId, UUID extraId, ReviewExtraQuery query){
+        Extra extra = extraRepository.findById(extraId)
+                .filter(Extra::getIsActive)
+                .orElseThrow(() -> new NotFoundException("This extra is no longer available"));
+        if (!extra.getAddonPossible()) throw new ConflictException("This extra cannot be added to a booking");
+
+        try {
+            // An expired cart has no items, so both are checked together
+            List<CartItem> cartItems = reservedCache.getCartItems(userId);
+            Optional<Instant> expiresAt = reservedCache.getCartExpiry(userId);
+            if (cartItems.isEmpty() || expiresAt.isEmpty()){
+                throw new ConflictException("Add a room to your booking before adding extras");
+            }
+
+            // The whole stay: earliest check-in to latest check-out, in case the rooms have different dates
+            LocalDateTime from = cartItems.stream().map(CartItem::from).min(Comparator.naturalOrder()).orElseThrow();
+            LocalDateTime to = cartItems.stream().map(CartItem::to).max(Comparator.naturalOrder()).orElseThrow();
+            int nights = PriceUtils.nights(from.toLocalDate(), to.toLocalDate());
+
+            int total = PriceUtils.extraTotal(extra.getPrice(), extra.getIsPriceFixed(), query.amount(), nights);
+            return extraAvailabilityResMapper.toResponse(extra, query.amount(), from, to, nights, total, expiresAt.get());
+        } catch (RedisConnectionFailureException e){
+            throw new InternalServerException("Extras are temporarily unavailable. Please try again");
         }
     }
 

@@ -1,7 +1,9 @@
 package com.example.inventoryserviceproject.controller;
 
 import com.example.inventoryserviceproject.dto.request.ReviewAvailabilityQuery;
+import com.example.inventoryserviceproject.dto.request.ReviewExtraQuery;
 import com.example.inventoryserviceproject.dto.response.AvailabilityResponse;
+import com.example.inventoryserviceproject.dto.response.ExtraAvailabilityResponse;
 import com.example.inventoryserviceproject.service.AvailabilityService;
 import com.example.inventoryserviceproject.utils.ClientResponse;
 import jakarta.validation.Valid;
@@ -47,5 +49,25 @@ public class AvailabilityController {
     ){
         AvailabilityResponse reservation = availabilityService.reserveRooms(userId, variantId, query);
         return ClientResponse.ok("reservation", reservation);
+    }
+
+    /**
+     * Checks that an extra can be added to a booking, and prices it for the
+     * stay in the user's cart. Nothing is added to the cart. Called by the
+     * booking-service when a user adds an extra to their cart.
+     *
+     * @param extraId the id of the extra
+     * @param query   the validated query: amount of the extra
+     * @param userId  the id of the user whose cart the stay is read from
+     * @return a response with the extra and its price for the stay
+     */
+    @GetMapping("/availability/extras/{extraId}")
+    public ResponseEntity<Map<String, ExtraAvailabilityResponse>> verifyExtra(
+            @PathVariable UUID extraId,
+            @Valid @ModelAttribute ReviewExtraQuery query,
+            @RequestHeader("X-User-Id") UUID userId
+    ){
+        ExtraAvailabilityResponse extra = availabilityService.verifyExtra(userId, extraId, query);
+        return ClientResponse.ok("extra", extra);
     }
 }

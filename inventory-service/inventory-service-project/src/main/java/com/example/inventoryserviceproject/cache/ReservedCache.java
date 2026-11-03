@@ -65,6 +65,17 @@ public class ReservedCache {
     }
 
     /**
+     * Returns when the user's cart expires, without starting a new cart.
+     *
+     * @param userId the id of the user
+     * @return when the cart expires, or empty if the user has no cart
+     */
+    public Optional<Instant> getCartExpiry(UUID userId){
+        Object stored = redis.opsForHash().get(CART_PREFIX + userId, EXPIRES_AT_FIELD);
+        return Optional.ofNullable(stored).map(value -> Instant.ofEpochMilli(Long.parseLong((String) value)));
+    }
+
+    /**
      * Retrieves the items in the user's cart.
      *
      * @param userId the id of the user

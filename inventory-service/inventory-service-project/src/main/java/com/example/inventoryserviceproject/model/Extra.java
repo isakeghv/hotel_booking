@@ -13,7 +13,7 @@ import java.util.UUID;
  * offered as an add-on, such as breakfast or an extra towel.
  */
 @Entity
-@Table(name = "room_extras")
+@Table(name = "extras")
 public class Extra {
     @Id
     private UUID extraId;
