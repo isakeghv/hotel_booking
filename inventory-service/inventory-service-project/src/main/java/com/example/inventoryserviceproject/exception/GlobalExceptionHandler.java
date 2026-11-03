@@ -34,8 +34,10 @@ public class GlobalExceptionHandler {
         List<FieldError> errs = new ArrayList<>();
         assert ex.getBindingResult() != null;
         ex.getBindingResult().getFieldErrors()
+                // Binding failures (e.g. "abc" for a date) only have Spring's technical message
                 .forEach(err -> errs.add(new FieldError(
-                        err.getField(), err.getDefaultMessage()
+                        err.getField(),
+                        err.isBindingFailure() ? "Field '" + err.getField() + "' has an invalid value" : err.getDefaultMessage()
                 )));
 
         return ResponseEntity.badRequest().body(Map.of("err", errs));

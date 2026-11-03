@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -25,6 +26,17 @@ public interface OccupiedRoomRepository extends JpaRepository<OccupiedRoom, UUID
      * @return true if an overlapping period exists, false otherwise
      */
     boolean existsByRoomIdAndFromTimeLessThanAndToTimeGreaterThan(UUID roomId, LocalDateTime toTime, LocalDateTime fromTime);
+
+    /**
+     * Finds the periods of the given rooms that overlap the given period. Uses
+     * the same overlap rule as {@link #existsByRoomIdAndFromTimeLessThanAndToTimeGreaterThan}.
+     *
+     * @param roomIds  the ids of the rooms
+     * @param toTime   when the given period ends
+     * @param fromTime when the given period starts
+     * @return the overlapping periods, or an empty list if there are none
+     */
+    List<OccupiedRoom> findAllByRoomIdInAndFromTimeLessThanAndToTimeGreaterThan(Collection<UUID> roomIds, LocalDateTime toTime, LocalDateTime fromTime);
 
     /**
      * Finds the periods that are either ongoing or in the future, meaning they

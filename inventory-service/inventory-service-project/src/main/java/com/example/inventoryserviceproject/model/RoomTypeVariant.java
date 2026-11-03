@@ -2,10 +2,8 @@ package com.example.inventoryserviceproject.model;
 
 
 import com.example.inventoryserviceproject.dto.request.ReviewNewRoomVariant;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.persistence.*;
 
 import java.util.UUID;
 
@@ -20,6 +18,14 @@ public class RoomTypeVariant {
     private UUID variantId;
     @Column(name = "type_id")
     private UUID roomTypeId;
+
+    // Read-only relation on the same column as roomTypeId, so the room type can be
+    // fetched in the same query (see VariantRepository). roomTypeId is still what is written.
+    @JsonIgnore
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "type_id", insertable = false, updatable = false)
+    private RoomType roomType;
+
     private String variantName;
     private int extraPrice;
     private boolean isActive;
@@ -55,6 +61,14 @@ public class RoomTypeVariant {
      * @return the id of the room type the variant belongs to
      */
     public UUID getRoomTypeId() { return roomTypeId; }
+
+    /**
+     * Only set on variants loaded from the database, not on newly created ones.
+     *
+     * @return the room type the variant belongs to
+     */
+    @JsonIgnore
+    public RoomType getRoomType() { return roomType; }
 
     /**
      * @return the name of the variant

@@ -43,13 +43,11 @@ services:
     depends_on:
       - user-db
       - kafka
-
-  # Cache for making inventory-items temporarily unavailable
-  inventory-lock-cache:
-    image: 'redis:latest'
   
-  # Cache for content provided to user
-  inventory-content-cache:
+  # Cache for 
+  # - content provided to user
+  # - making inventory-items temporarily unavailable
+  inventory-reserved-cache:
     image: 'redis:latest'
 
   inventory-service:
@@ -61,8 +59,7 @@ services:
     depends_on:
       - inventory-db
       - kafka
-      - inventory-lock-cache
-      - inventory-content-cache
+      - inventory-reserved-cache
   
   image-service:
     build: ./image-service

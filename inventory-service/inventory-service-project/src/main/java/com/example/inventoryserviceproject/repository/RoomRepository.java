@@ -3,6 +3,7 @@ package com.example.inventoryserviceproject.repository;
 import com.example.inventoryserviceproject.model.Room;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -17,4 +18,12 @@ public interface RoomRepository extends JpaRepository<Room, UUID> {
      * @return true if such a room exists, false otherwise
      */
     boolean existsByRoomNumber(int roomNumber);
+
+    /**
+     * Finds the active rooms of a room type.
+     *
+     * @param roomTypeId the id of the room type
+     * @return the rooms sorted by room number, or an empty list if there are none
+     */
+    List<Room> findAllByRoomTypeIdAndIsActiveTrueOrderByRoomNumberAsc(UUID roomTypeId);
 }
