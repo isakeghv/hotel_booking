@@ -168,6 +168,29 @@ public class ReservedCache {
     }
 
     /**
+     * Releases everything in the user's cart: the holds on its rooms, and the
+     * cart itself. Safe to call several times, and on a cart that has expired,
+     * as deleting keys that do not exist does nothing.
+     *
+     * @param userId the id of the user
+     * @return the number of rooms released
+     */
+    public int releaseCart(UUID userId){
+        List<CartItem> items = getCartItems(userId);
+
+        // Holds first, cart last: if this stops halfway, the cart still lists the holds, so a retry can release them
+        if (!items.isEmpty()){
+            List<String> holdKeys = items.stream()
+                    .flatMap(item -> item.from().toLocalDate().datesUntil(item.to().toLocalDate())
+                            .map(night -> holdKey(item.roomId(), night)))
+                    .toList();
+            redis.delete(holdKeys);
+        }
+        redis.delete(CART_PREFIX + userId);
+        return items.size();
+    }
+
+    /**
      * @param roomId the id of the room
      * @param night  the night
      * @return the key holding the room for the night
