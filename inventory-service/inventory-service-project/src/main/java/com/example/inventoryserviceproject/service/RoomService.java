@@ -1,5 +1,6 @@
 package com.example.inventoryserviceproject.service;
 
+import com.example.inventoryserviceproject.cache.CartItem;
 import com.example.inventoryserviceproject.dto.request.ReviewNewRoom;
 import com.example.inventoryserviceproject.dto.request.ReviewOccupyRoom;
 import com.example.inventoryserviceproject.dto.response.OccupiedRoomResponse;
@@ -21,7 +22,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Service containing the business logic for single rooms (not room types),
@@ -191,5 +194,38 @@ public class RoomService {
         return occupations.stream()
                 .map(occupiedRoomResMapper::toResponse)
                 .toList();
+    }
+
+    /**
+     * Stores the rooms of a completed booking as occupied ({@code booked} is true).
+     * All rooms are stored in one transaction, so either all of them or none are stored.
+     *
+     * <p>Each period gets the cart item's id, so if the same booking is confirmed
+     * twice, e.g. when an event is delivered again, the rooms already stored are skipped.
+     *
+     * @param items the rooms of the booking, from the user's cart
+     * @return the number of rooms stored, not counting those already stored
+     * @throws ConflictException if any of the rooms has become unavailable in the meantime
+     */
+    @Transactional
+    public int saveBookedRooms(List<CartItem> items){
+        // One query for those already stored, instead of one per room
+        Set<UUID> alreadySaved = occupiedRoomRepository.findAllById(items.stream().map(CartItem::itemId).toList())
+                .stream()
+                .map(OccupiedRoom::getOccupiedId)
+                .collect(Collectors.toSet());
+
+        List<OccupiedRoom> toSave = items.stream()
+                .filter(item -> !alreadySaved.contains(item.itemId()))
+                .map(item -> new OccupiedRoom(item.itemId(), item.roomId(), item.from(), item.to(), true))
+                .toList();
+
+        // Flushed here so a violation of the overlap constraint is thrown and caught in this method
+        try {
+            occupiedRoomRepository.saveAllAndFlush(toSave);
+        } catch (DataIntegrityViolationException e){
+            throw new ConflictException("One or more of the rooms are no longer available");
+        }
+        return toSave.size();
     }
 }

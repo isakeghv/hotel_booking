@@ -1,6 +1,7 @@
 package com.example.inventoryserviceproject.model;
 
 import jakarta.persistence.*;
+import org.springframework.data.domain.Persistable;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -12,7 +13,7 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "occupied_room")
-public class OccupiedRoom {
+public class OccupiedRoom implements Persistable<UUID> {
     @Id
     private UUID occupiedId;
     // Explicit name, so Hibernate sees this and the relation below as the same column
@@ -27,6 +28,11 @@ public class OccupiedRoom {
     private LocalDateTime fromTime;
     private LocalDateTime toTime;
     private boolean booked;
+
+    // The id is set before saving, so Spring cannot tell new periods from existing ones by the id.
+    // Without this, every save would first run a SELECT to check whether the period already exists
+    @Transient
+    private boolean newEntity = true;
 
     /**
      * Creates an empty period. Required by JPA.
@@ -48,6 +54,44 @@ public class OccupiedRoom {
         this.toTime = toTime;
         this.booked = booked;
     }
+
+    /**
+     * Creates a new period for a room with a given id. Used when the id must be
+     * known in advance, e.g. a cart item's id, so saving the same period twice
+     * can be detected.
+     *
+     * @param occupiedId the id of the period
+     * @param roomId     the id of the room
+     * @param fromTime   when the period starts
+     * @param toTime     when the period ends
+     * @param booked     true if caused by a booking, false if the room was set as unavailable
+     */
+    public OccupiedRoom(UUID occupiedId, UUID roomId, LocalDateTime fromTime, LocalDateTime toTime, boolean booked){
+        this.occupiedId = occupiedId;
+        this.roomId = roomId;
+        this.fromTime = fromTime;
+        this.toTime = toTime;
+        this.booked = booked;
+    }
+
+    /**
+     * Marks the period as existing once it is loaded or saved, see {@link #isNew()}.
+     */
+    @PostLoad
+    @PostPersist
+    void markNotNew(){ this.newEntity = false; }
+
+    /**
+     * @return the unique id of the period
+     */
+    @Override
+    public UUID getId() { return occupiedId; }
+
+    /**
+     * @return true if the period has not been saved or loaded yet
+     */
+    @Override
+    public boolean isNew() { return newEntity; }
 
     /**
      * @return the unique id of the period
