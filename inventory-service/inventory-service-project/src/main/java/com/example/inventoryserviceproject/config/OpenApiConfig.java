@@ -38,7 +38,7 @@ public class OpenApiConfig {
             3. Customer adds rooms to the cart: `GET /inventory/availability/variants/{variantId}` holds the rooms \
             for **30 minutes** from the first room added, and returns an `itemId` per room. Store these.
             4. Customer adds extras: `GET /inventory/availability/extras/{extraId}` prices an extra for the stay in the cart.
-            5. Kafka events finish the flow: `booking-confirmed` stores the rooms, `reservation-item-remove` removes one \
+            5. Kafka events finish the flow: `reservation-confirmed` stores the rooms, `reservation-item-remove` removes one \
             room, `reservation-cancelled` releases the whole cart, `booking-cancelled` frees the rooms of a paid booking.
 
             ## Conventions

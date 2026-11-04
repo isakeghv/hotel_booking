@@ -60,7 +60,7 @@ public class ReservationEventService {
      */
     @KafkaListener(topics = "reservation-confirmed", groupId = "inventory-service-group")
     public void onBookingConfirmed(String message){
-        Optional<BookingConfirmedEvent> event = parse(message, BookingConfirmedEvent.class, "booking-confirmed");
+        Optional<BookingConfirmedEvent> event = parse(message, BookingConfirmedEvent.class, "reservation-confirmed");
         if (event.isEmpty() || event.get().userId() == null) return;
         UUID userId = event.get().userId();
 
