@@ -83,7 +83,7 @@ public class RoomController {
     @Operation(
             summary = "List all room types",
             description = """
-                    **Access: Customer.**
+                    **Access: Signed in.**
 
                     Lists all room types, each with its capacity calculated from its beds.
 
@@ -130,7 +130,7 @@ public class RoomController {
     @Operation(
             summary = "Get a room type",
             description = """
-                    **Access: Customer.**
+                    **Access: Signed in.**
 
                     Returns a room type with its price, capacity, beds and images.
 

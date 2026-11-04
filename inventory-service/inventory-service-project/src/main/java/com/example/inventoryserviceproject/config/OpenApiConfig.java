@@ -24,9 +24,9 @@ public class OpenApiConfig {
             | Access | Meaning |
             |---|---|
             | **Public** | No sign-in needed, reached through the API gateway. |
-            | **Customer** | Signed in, permission level 0–3. |
-            | **Staff** | Employee, manager or owner, permission level 1–3. |
-            | **Manager** | Manager or owner, permission level 2–3. |
+            | **Signed in** | Any signed-in user: customer, employee, manager or owner (permission level 0–3). |
+            | **Staff** | Employee, manager or owner (permission level 1–3). |
+            | **Manager** | Manager or owner (permission level 2–3). |
             | **Internal** | Only called by the booking-service inside the Docker network. Not routed by the gateway. |
 
             The gateway checks the sign-in and adds the headers `X-User-Id` and `X-Permission-Level`. \

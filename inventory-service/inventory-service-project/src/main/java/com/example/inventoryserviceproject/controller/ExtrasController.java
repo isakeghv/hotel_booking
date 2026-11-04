@@ -67,7 +67,7 @@ public class ExtrasController {
     @Operation(
             summary = "List extras",
             description = """
-                    **Access: Customer.**
+                    **Access: Signed in.**
 
                     **Response key:** `extras`.
                     """)
