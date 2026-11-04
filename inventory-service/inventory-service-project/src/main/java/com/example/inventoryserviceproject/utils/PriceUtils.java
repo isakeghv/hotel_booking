@@ -43,6 +43,20 @@ public final class PriceUtils {
     }
 
     /**
+     * Calculates the average price per night of a stay, so that the price per
+     * night times the nights adds up to the total, also when a variant has a
+     * price per stay. Rounded up, so it never shows less than what is paid.
+     * Shorter stays therefore get a higher average when a price per stay is included.
+     *
+     * @param total  the total price of the stay
+     * @param nights the number of nights
+     * @return the average price per night, rounded up to whole USD
+     */
+    public static int averagePerNight(int total, int nights){
+        return Math.ceilDiv(total, nights);
+    }
+
+    /**
      * @param roomTotal    the price of the room for the whole stay
      * @param variantTotal the price of the variant for the whole stay
      * @return the total price of one room with its variant

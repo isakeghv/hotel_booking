@@ -16,14 +16,17 @@ import java.util.UUID;
 @Component
 public class AvailableRoomTypeResMapper {
     private final String imageBaseUrl;
+    private final DescriptionResMapper descriptionResMapper;
 
     /**
      * Creates the mapper.
      *
-     * @param imageBaseUrl base URL that image file names are appended to
+     * @param imageBaseUrl         base URL that image file names are appended to
+     * @param descriptionResMapper mapper that builds the description
      */
-    public AvailableRoomTypeResMapper(@Value("${image.base.url}") String imageBaseUrl) {
+    public AvailableRoomTypeResMapper(@Value("${image.base.url}") String imageBaseUrl, DescriptionResMapper descriptionResMapper) {
         this.imageBaseUrl = imageBaseUrl;
+        this.descriptionResMapper = descriptionResMapper;
     }
 
     /**
@@ -31,6 +34,7 @@ public class AvailableRoomTypeResMapper {
      * cheapest variant.
      *
      * @param roomType       the room type
+     * @param description    the room type's main description, or null if it has none
      * @param variant        the room type's cheapest active variant
      * @param roomBeds       the links stating how many of each bed the room type has
      * @param bedsById       the bed types used in the room type, by id
@@ -43,6 +47,7 @@ public class AvailableRoomTypeResMapper {
      */
     public AvailableRoomTypeResponse toResponse(
             RoomType roomType,
+            RoomInformation description,
             RoomTypeVariant variant,
             List<RoomBed> roomBeds,
             Map<UUID, Bed> bedsById,
@@ -63,15 +68,15 @@ public class AvailableRoomTypeResMapper {
                 ? null
                 : new AvailableRoomTypeResponse.Image(imageBaseUrl + image.getFileName(), image.getAltText());
 
-        // A variant price per stay is not part of the price per night, only of the totals
-        int pricePerNight = roomType.getRoomPrice() + (variant.isPriceFixed() ? 0 : variant.getExtraPrice());
         int roomTotal = PriceUtils.roomTotal(roomType.getRoomPrice(), nights);
         int variantTotal = PriceUtils.variantTotal(variant.getExtraPrice(), variant.isPriceFixed(), nights);
         int totalPerRoom = PriceUtils.total(roomTotal, variantTotal);
+        int pricePerNight = PriceUtils.averagePerNight(totalPerRoom, nights);
 
         return new AvailableRoomTypeResponse(
                 roomType.getRoomTypeId(),
                 roomType.getName(),
+                descriptionResMapper.toResponse(description),
                 capacity,
                 beds,
                 imageInfo,

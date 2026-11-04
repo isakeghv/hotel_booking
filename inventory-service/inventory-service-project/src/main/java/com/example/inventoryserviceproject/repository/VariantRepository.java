@@ -39,4 +39,12 @@ public interface VariantRepository extends JpaRepository<RoomTypeVariant, UUID> 
      * @return the active variants, or an empty list if there are none
      */
     List<RoomTypeVariant> findAllByRoomTypeIdInAndIsActiveTrue(Collection<UUID> roomTypeIds);
+
+    /**
+     * Finds the active variants of a room type.
+     *
+     * @param roomTypeId the id of the room type
+     * @return the active variants, or an empty list if there are none
+     */
+    List<RoomTypeVariant> findAllByRoomTypeIdAndIsActiveTrue(UUID roomTypeId);
 }

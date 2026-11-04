@@ -49,6 +49,7 @@ public class AvailabilityService {
     private final BedRepository bedRepository;
     private final ImageRepository imageRepository;
     private final AvailableRoomTypeResMapper availableRoomTypeResMapper;
+    private final RoomInformationRepository roomInformationRepository;
     private final LocalTime checkInTime;
     private final LocalTime checkOutTime;
 
@@ -67,6 +68,7 @@ public class AvailabilityService {
      * @param bedRepository         repository for bed types
      * @param imageRepository       repository for room type images
      * @param availableRoomTypeResMapper mapper that builds the search response
+     * @param roomInformationRepository repository for room type information
      * @param checkInTime           the hotel's check-in time, e.g. 15:00
      * @param checkOutTime          the hotel's check-out time, e.g. 12:00
      */
@@ -83,6 +85,7 @@ public class AvailabilityService {
             BedRepository bedRepository,
             ImageRepository imageRepository,
             AvailableRoomTypeResMapper availableRoomTypeResMapper,
+            RoomInformationRepository roomInformationRepository,
             @Value("${hotel.checkin.time}") String checkInTime,
             @Value("${hotel.checkout.time}") String checkOutTime
     ){
@@ -98,6 +101,7 @@ public class AvailabilityService {
         this.bedRepository = bedRepository;
         this.imageRepository = imageRepository;
         this.availableRoomTypeResMapper = availableRoomTypeResMapper;
+        this.roomInformationRepository = roomInformationRepository;
         this.checkInTime = LocalTime.parse(checkInTime);
         this.checkOutTime = LocalTime.parse(checkOutTime);
     }
@@ -218,6 +222,10 @@ public class AvailabilityService {
         }
         Map<UUID, Long> availableByType = freeRooms.stream().collect(Collectors.groupingBy(Room::getRoomTypeId, Collectors.counting()));
 
+        Map<UUID, RoomInformation> descriptionByType = roomInformationRepository.findAllByRoomTypeIdInAndIsMainDescriptionTrue(roomTypeIds)
+                .stream()
+                .collect(Collectors.toMap(RoomInformation::getRoomTypeId, Function.identity()));
+
         // First image per room type. Sorted by image id, so it is the same image every time
         Map<UUID, ImageData> firstImageByType = imageRepository.findAllByRoomTypeIdInOrderByImageIdAsc(roomTypeIds)
                 .stream()
@@ -239,7 +247,7 @@ public class AvailabilityService {
             if (availableRooms < roomsToBook) continue;
 
             results.add(availableRoomTypeResMapper.toResponse(
-                    roomType, variant, beds, bedsById, capacity, firstImageByType.get(roomTypeId),
+                    roomType, descriptionByType.get(roomTypeId), variant, beds, bedsById, capacity, firstImageByType.get(roomTypeId),
                     availableRooms, roomsToBook, nights.size()));
         }
 

@@ -67,6 +67,8 @@ gateway:
       methods: [POST]
     - path: /inventory/availability
       methods: [ GET ]
+    - path: /inventory/roomtypes/{roomTypeId}/variants
+      methods: [ GET ]
 
   sign-out-paths:
     - path: /auth/signout

@@ -24,7 +24,8 @@ import java.util.UUID;
  *                       needs 2 rooms). {@code total} is the price for this many rooms, and
  *                       it is the amount the booking-service sends when reserving the rooms
  * @param nights         the number of nights in the stay
- * @param pricePerNight  the price per night for one room, including the variant's price if it is per night
+ * @param pricePerNight  the average price per night for one room ({@code totalPerRoom} / nights, rounded up),
+ *                       so it adds up to the total also when the variant has a price per stay
  * @param totalPerRoom   the price of one room for the whole stay, including a variant price per stay
  * @param total          the price of {@code roomsToBook} rooms for the whole stay
  * @param currency       the currency of all prices, e.g. "USD"

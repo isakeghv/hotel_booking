@@ -3,6 +3,8 @@ package com.example.inventoryserviceproject.controller;
 
 import com.example.inventoryserviceproject.dto.request.ReviewLinkExtraToVariant;
 import com.example.inventoryserviceproject.dto.request.ReviewNewRoomVariant;
+import com.example.inventoryserviceproject.dto.request.ReviewVariantQuery;
+import com.example.inventoryserviceproject.dto.response.RoomTypeVariantsResponse;
 import com.example.inventoryserviceproject.service.VariantService;
 import com.example.inventoryserviceproject.utils.ClientResponse;
 import jakarta.validation.Valid;
@@ -63,5 +65,23 @@ public class VariantController {
         variantService.linkExtraToVariant(request, variantId, extrasId);
 
         return ClientResponse.okEmpty();
+    }
+
+    /**
+     * Retrieves the active variants of a room type, priced for a stay and
+     * number of rooms. Public endpoint: customers use it to choose a variant
+     * after choosing a room type in the search.
+     *
+     * @param roomTypeId the id of the room type
+     * @param query      the validated query: number of rooms, check-in and check-out dates
+     * @return a response with the variants, lowest total first
+     */
+    @GetMapping("/roomtypes/{roomTypeId}/variants")
+    public ResponseEntity<Map<String, RoomTypeVariantsResponse>> getRoomTypeVariants(
+            @PathVariable UUID roomTypeId,
+            @Valid @ModelAttribute ReviewVariantQuery query
+    ){
+        RoomTypeVariantsResponse variants = variantService.getRoomTypeVariants(roomTypeId, query);
+        return ClientResponse.ok("variants", variants);
     }
 }
