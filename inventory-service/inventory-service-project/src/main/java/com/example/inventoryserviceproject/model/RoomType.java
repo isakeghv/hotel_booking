@@ -5,12 +5,14 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 
 import java.util.UUID;
 
 /**
  * Entity for a type of room that can be booked, with its base price and
- * capacity. The capacity is derived from the beds linked to the room type.
+ * capacity. The capacity is not stored, but calculated from the beds linked
+ * to the room type whenever it is needed.
  */
 @Entity
 @Table(name = "room_type")
@@ -20,6 +22,8 @@ public class RoomType {
     private UUID roomTypeId;
     private int roomPrice;
     private String name;
+    // Not stored in the database: always calculated from the beds, so it cannot get out of date
+    @Transient
     private int capacity;
     private boolean isActive;
 
