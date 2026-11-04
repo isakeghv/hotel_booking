@@ -2,6 +2,7 @@ package com.example.inventoryserviceproject.service;
 
 import com.example.inventoryserviceproject.cache.CartItem;
 import com.example.inventoryserviceproject.cache.ReservedCache;
+import com.example.inventoryserviceproject.dto.event.BookingCancelledEvent;
 import com.example.inventoryserviceproject.dto.event.BookingConfirmedEvent;
 import com.example.inventoryserviceproject.dto.event.ReservationCancelledEvent;
 import com.example.inventoryserviceproject.dto.event.ReservationItemRemovedEvent;
@@ -19,8 +20,9 @@ import java.util.UUID;
 
 /**
  * Service handling events from the booking-service about reservations: storing
- * reserved rooms when a booking is confirmed, releasing one room when it is
- * removed from a cart, and releasing all of them when a reservation is cancelled.
+ * reserved rooms when a booking is confirmed, deleting them when a completed
+ * booking is cancelled, releasing one room when it is removed from a cart, and
+ * releasing all of them when a reservation is cancelled.
  * Only the entry point for the events; the work is done by {@link RoomService}
  * (database) and {@link ReservedCache} (cache).
  *
@@ -79,6 +81,24 @@ public class ReservationEventService {
         }
 
         reservedCache.releaseCart(userId);
+    }
+
+    /**
+     * Makes the rooms of a completed (paid) booking available again when it is
+     * cancelled. Not used for reservations that are not yet completed.
+     *
+     * @param message the event as JSON, e.g. {"itemIds": ["...", "..."]}
+     */
+    @KafkaListener(topics = "booking-cancelled", groupId = "inventory-service-group")
+    public void onBookingCancelled(String message){
+        Optional<BookingCancelledEvent> event = parse(message, BookingCancelledEvent.class, "booking-cancelled");
+        if (event.isEmpty() || event.get().itemIds() == null || event.get().itemIds().isEmpty()){
+            if (event.isPresent()) log.warn("Skipping booking-cancelled event without itemIds: {}", message);
+            return;
+        }
+
+        long cancelled = roomService.cancelBookedRooms(event.get().itemIds());
+        log.info("Made {} of {} booked room(s) available again", cancelled, event.get().itemIds().size());
     }
 
     /**

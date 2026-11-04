@@ -228,4 +228,21 @@ public class RoomService {
         }
         return toSave.size();
     }
+
+    /**
+     * Makes the rooms of a cancelled booking available again, by deleting their
+     * periods. The ids are the booking's item ids, which are also the periods' ids,
+     * as they were stored with the cart item's id when the booking was confirmed.
+     *
+     * <p>Only periods caused by bookings are deleted, never periods set by staff.
+     * Ids that do not exist are ignored, so cancelling twice is safe. Checking that
+     * the booking belongs to the user is done by the booking-service.
+     *
+     * @param itemIds the item ids of the cancelled booking
+     * @return the number of rooms made available
+     */
+    @Transactional
+    public long cancelBookedRooms(List<UUID> itemIds){
+        return occupiedRoomRepository.deleteAllByOccupiedIdInAndBookedTrue(itemIds);
+    }
 }

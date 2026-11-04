@@ -49,4 +49,13 @@ public interface OccupiedRoomRepository extends JpaRepository<OccupiedRoom, UUID
      */
     @EntityGraph(attributePaths = {"room", "room.roomType"})
     List<OccupiedRoom> findAllByBookedAndToTimeAfterOrderByFromTimeAsc(boolean booked, LocalDateTime now);
+
+    /**
+     * Deletes the given periods, but only those caused by bookings, so periods
+     * set as unavailable by staff are never deleted by this.
+     *
+     * @param occupiedIds the ids of the periods, the same as the booking's item ids
+     * @return the number of periods deleted
+     */
+    long deleteAllByOccupiedIdInAndBookedTrue(Collection<UUID> occupiedIds);
 }
