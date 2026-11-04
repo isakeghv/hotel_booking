@@ -1,6 +1,7 @@
 package com.example.inventoryserviceproject.service;
 
 import com.example.inventoryserviceproject.cache.CartItem;
+import com.example.inventoryserviceproject.cache.ReservedCache;
 import com.example.inventoryserviceproject.dto.request.ReviewNewRoom;
 import com.example.inventoryserviceproject.dto.request.ReviewOccupyRoom;
 import com.example.inventoryserviceproject.dto.response.OccupiedRoomResponse;
@@ -14,12 +15,16 @@ import com.example.inventoryserviceproject.model.Room;
 import com.example.inventoryserviceproject.repository.OccupiedRoomRepository;
 import com.example.inventoryserviceproject.repository.RoomRepository;
 import com.example.inventoryserviceproject.repository.RoomTypesRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -36,25 +41,37 @@ public class RoomService {
     private final OccupiedRoomRepository occupiedRoomRepository;
     private final RoomTypesRepository roomTypesRepository;
     private final OccupiedRoomResMapper occupiedRoomResMapper;
+    private final ReservedCache reservedCache;
+    private final LocalTime checkInTime;
+    private final LocalTime checkOutTime;
 
     /**
-     * Creates the service with the repositories it uses.
+     * Creates the service with the repositories, mapper and cache it uses.
      *
      * @param roomRepository         repository for single rooms
      * @param occupiedRoomRepository repository for the periods rooms are unavailable
      * @param roomTypesRepository    repository for room types
      * @param occupiedRoomResMapper  mapper that builds the occupied room response
+     * @param reservedCache          cache holding rooms in users' carts
+     * @param checkInTime            the hotel's check-in time, e.g. 15:00
+     * @param checkOutTime           the hotel's check-out time, e.g. 12:00
      */
     public RoomService(
             RoomRepository roomRepository,
             OccupiedRoomRepository occupiedRoomRepository,
             RoomTypesRepository roomTypesRepository,
-            OccupiedRoomResMapper occupiedRoomResMapper
+            OccupiedRoomResMapper occupiedRoomResMapper,
+            ReservedCache reservedCache,
+            @Value("${hotel.checkin.time}") String checkInTime,
+            @Value("${hotel.checkout.time}") String checkOutTime
     ){
         this.roomRepository = roomRepository;
         this.occupiedRoomRepository = occupiedRoomRepository;
         this.roomTypesRepository = roomTypesRepository;
         this.occupiedRoomResMapper = occupiedRoomResMapper;
+        this.reservedCache = reservedCache;
+        this.checkInTime = LocalTime.parse(checkInTime);
+        this.checkOutTime = LocalTime.parse(checkOutTime);
     }
 
     /**
@@ -102,9 +119,9 @@ public class RoomService {
      * @param roomId          the id of the room
      * @param permissionLevel the permission level of the caller
      * @throws UnauthorizedException   if the permission level is not 0, 1, 2 or 3
-     * @throws NotFoundException       if the room does not exist
-     * @throws ConflictException       if the room is already unavailable during the period
-     * @throws InternalServerException if the period could not be saved
+     * @throws NotFoundException       if the room does not exist or is not active
+     * @throws ConflictException       if the room is already unavailable, or held in a customer's cart, during the period
+     * @throws InternalServerException if the period could not be saved, or the cache cannot be reached
      */
     public void occupyRoom(ReviewOccupyRoom request, UUID roomId, int permissionLevel){
         boolean booked = switch (permissionLevel){
@@ -113,11 +130,20 @@ public class RoomService {
             default -> throw new UnauthorizedException("Not permitted");
         };
 
-        boolean roomExists = roomRepository.existsById(roomId);
-        if (!roomExists) throw new NotFoundException("Room not found");
+        boolean roomIsActive = roomRepository.findById(roomId).map(Room::getIsActive).orElse(false);
+        if (!roomIsActive) throw new NotFoundException("Room not found, or it is not active");
 
         boolean isOccupied = occupiedRoomRepository.existsByRoomIdAndFromTimeLessThanAndToTimeGreaterThan(roomId, request.to(), request.from());
         if ( isOccupied) throw new ConflictException("Room is unavailable during this period");
+
+        // A room in a customer's cart is not in the database yet, only held in the cache.
+        // Blocking it would make storing the customer's booking fail when they complete it
+        try {
+            boolean isHeld = !reservedCache.findHeldRoomIds(List.of(roomId), overlappingNights(request.from(), request.to())).isEmpty();
+            if (isHeld) throw new ConflictException("A customer is currently booking this room for this period. Please try again later");
+        } catch (RedisConnectionFailureException e){
+            throw new InternalServerException("Could not check whether the room is being booked. Please try again");
+        }
 
         // The check above gives a clear error in most cases, but two requests arriving at the same time can
         // both pass it. The exclusion constraint on the table then rejects the second one, which ends up here.
@@ -130,6 +156,23 @@ public class RoomService {
         } catch (DataAccessException e){
             throw new InternalServerException("Internal server error. Failed to set room as unavailable");
         }
+    }
+
+    /**
+     * Finds the nights whose stay overlaps a period. Rooms are held in the cache
+     * per night, where night D lasts from check-in on D to check-out on D + 1.
+     * So e.g. a period from 10:00 to 14:00 overlaps the night before (the guest
+     * leaves at check-out), but not the night starting that day (check-in is later).
+     *
+     * @param from when the period starts
+     * @param to   when the period ends
+     * @return the nights overlapping the period
+     */
+    private List<LocalDate> overlappingNights(LocalDateTime from, LocalDateTime to){
+        // The night before "from" can still be going on, until its check-out
+        return from.toLocalDate().minusDays(1).datesUntil(to.toLocalDate().plusDays(1))
+                .filter(night -> night.atTime(checkInTime).isBefore(to) && night.plusDays(1).atTime(checkOutTime).isAfter(from))
+                .toList();
     }
 
     /**
