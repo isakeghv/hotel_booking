@@ -13,6 +13,7 @@ import java.util.UUID;
  *
  * @param roomTypeId     the id of the room type
  * @param name           the name of the room type
+ * @param description    the room type's main description, empty (null title, no lines) if it has none
  * @param capacity       how many people one room of this type sleeps
  * @param beds           the beds in one room of this type
  * @param image          the room type's first image, or null if it has none
@@ -31,6 +32,7 @@ import java.util.UUID;
 public record AvailableRoomTypeResponse(
         UUID roomTypeId,
         String name,
+        DescriptionResponse description,
         int capacity,
         List<BedInfo> beds,
         Image image,
