@@ -1,5 +1,6 @@
 package com.example.inventoryserviceproject.dto.response;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 import java.util.UUID;
 
@@ -12,10 +13,15 @@ import java.util.UUID;
  * @param rooms    the number of rooms the prices are for
  * @param currency the currency of all prices, e.g. "USD"
  */
+@Schema(description = "The variants of a room type, priced for a stay and number of rooms")
 public record RoomTypeVariantsResponse(
+        @Schema(description = "The variants, cheapest total first")
         List<VariantInfo> variants,
+        @Schema(description = "Number of nights the prices are for", example = "3")
         int nights,
+        @Schema(description = "Number of rooms the prices are for", example = "2")
         int rooms,
+        @Schema(description = "Currency of all prices", example = "USD")
         String currency
 ) {
     /**
@@ -30,11 +36,17 @@ public record RoomTypeVariantsResponse(
      * @param total         the price for all the rooms for the whole stay, everything included
      */
     public record VariantInfo(
+            @Schema(description = "Id of the variant. Send it when holding rooms")
             UUID variantId,
+            @Schema(description = "Name of the variant", example = "With breakfast")
             String name,
+            @Schema(description = "Main description of the variant")
             DescriptionResponse description,
+            @Schema(description = "Extras included with the variant")
             List<IncludedExtra> includes,
+            @Schema(description = "Average price per night for all the rooms (total / nights, rounded up), in USD", example = "348")
             int pricePerNight,
+            @Schema(description = "Price for all the rooms for the whole stay, room and variant together, in USD", example = "1040")
             int total
     ) {}
 

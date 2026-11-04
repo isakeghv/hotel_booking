@@ -1,5 +1,7 @@
 package com.example.inventoryserviceproject.dto.request;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.Hidden;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.NotNull;
@@ -12,15 +14,18 @@ public record ReviewVariantQuery(
         // Wrapper type so a missing value is null and caught by @NotNull, instead of silently becoming 0
         @NotNull(message = "Number of rooms is required")
         @Range(min = 1, max = 10, message = "Number of rooms must be between 1 and 10")
+        @Schema(description = "Number of rooms the prices are for, 1-10. Use roomsToBook from the search", example = "2")
         Integer rooms,
 
         @NotNull(message = "Check-in date is required, e.g. 2026-11-05")
         @FutureOrPresent(message = "Check-in date cannot be in the past")
         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+        @Schema(description = "Check-in date (YYYY-MM-DD). Check-in is at 15:00", example = "2026-11-05")
         LocalDate from,
 
         @NotNull(message = "Check-out date is required, e.g. 2026-11-08")
         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+        @Schema(description = "Check-out date (YYYY-MM-DD), after the check-in date. Check-out is at 12:00. At most 30 nights", example = "2026-11-08")
         LocalDate to
 ) {
 
@@ -30,6 +35,7 @@ public record ReviewVariantQuery(
          *
          * @return true if "to" is after "from", or if either is missing
          */
+        @Hidden
         @AssertTrue(message = "Check-out date must be after the check-in date")
         public boolean isValidPeriod(){
                 if (from == null || to == null) return true;
@@ -42,6 +48,7 @@ public record ReviewVariantQuery(
          *
          * @return true if the stay is at most {@link ReviewAvailabilityQuery#MAX_NIGHTS} nights, or if either date is missing
          */
+        @Hidden
         @AssertTrue(message = "A stay cannot be longer than " + ReviewAvailabilityQuery.MAX_NIGHTS + " nights")
         public boolean isWithinMaxStay(){
                 if (from == null || to == null) return true;

@@ -1,5 +1,6 @@
 package com.example.inventoryserviceproject.dto.response;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 import java.util.UUID;
 
@@ -30,19 +31,33 @@ import java.util.UUID;
  * @param total          the price of {@code roomsToBook} rooms for the whole stay
  * @param currency       the currency of all prices, e.g. "USD"
  */
+@Schema(description = "A room type available for the search, priced with its cheapest variant")
 public record AvailableRoomTypeResponse(
+        @Schema(description = "Id of the room type")
         UUID roomTypeId,
+        @Schema(description = "Name of the room type", example = "Deluxe Double")
         String name,
+        @Schema(description = "Main description of the room type")
         DescriptionResponse description,
+        @Schema(description = "How many people one room sleeps", example = "2")
         int capacity,
+        @Schema(description = "Beds in one room, e.g. shown as \"2 x Single bed, 1 person\"")
         List<BedInfo> beds,
+        @Schema(description = "First image of the room type, or null if it has none")
         Image image,
+        @Schema(description = "How many rooms of this type are free for the whole stay", example = "5")
         int availableRooms,
+        @Schema(description = "How many rooms of this type to book to fit the search: at least the minimum number of rooms asked for, and enough beds for all guests. total is the price for this many rooms, and it is the amount to send when holding the rooms", example = "2")
         int roomsToBook,
+        @Schema(description = "Number of nights in the stay", example = "3")
         int nights,
+        @Schema(description = "Average price per night for one room (totalPerRoom / nights, rounded up), in USD", example = "174")
         int pricePerNight,
+        @Schema(description = "Price of one room for the whole stay, in USD", example = "520")
         int totalPerRoom,
+        @Schema(description = "Price of roomsToBook rooms for the whole stay, in USD", example = "1040")
         int total,
+        @Schema(description = "Currency of all prices", example = "USD")
         String currency
 ) {
     /**

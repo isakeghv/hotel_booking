@@ -6,13 +6,15 @@ import org.springframework.http.ResponseEntity;
 import java.util.Map;
 
 /**
- * Factory methods for building JSON responses with a consistent shape. Successful responses use a caller-supplied key (or {@code message}), and error responses use the key {@code err}.
+ * Factory methods for building JSON responses with a consistent shape. Successful responses use the
+ * typed bodies in {@link com.example.inventoryserviceproject.dto.response.Envelopes}, and error responses
+ * use the key {@code err}.
  */
 public class ClientResponse {
 
 
     /**
-     * Wraps a single key and value in a map to be used as a response body.
+     * Wraps a single key and value in a map to be used as an error response body.
      *
      * @param key the key of the entry
      * @param value the value of the entry
@@ -24,47 +26,36 @@ public class ClientResponse {
     }
 
     /**
-     * Builds a 200 response with a single key and value in the body.
+     * Builds a 200 response with the given body, one of the records in
+     * {@link com.example.inventoryserviceproject.dto.response.Envelopes}.
      *
-     * @param key the key of the body entry
-     * @param value the value of the body entry
-     * @param <T> the type of the value
-     * @return a 200 response with the entry as body
+     * @param body the response body
+     * @param <T> the type of the body
+     * @return a 200 response with the body
      */
-    public static <T> ResponseEntity<Map<String, T>> ok(String key, T value){
-        return ResponseEntity.ok(resMap(key, value));
+    public static <T> ResponseEntity<T> ok(T body){
+        return ResponseEntity.ok(body);
     }
 
     /**
-     * Builds a 201 response with a single key and value in the body.
+     * Builds a 201 response with the given body, one of the records in
+     * {@link com.example.inventoryserviceproject.dto.response.Envelopes}.
      *
-     * @param key the key of the body entry
-     * @param value the value of the body entry
-     * @param <T> the type of the value
-     * @return a 201 response with the entry as body
+     * @param body the response body
+     * @param <T> the type of the body
+     * @return a 201 response with the body
      */
-    public static <T> ResponseEntity<Map<String, T>> created(String key, T value){
-        return ResponseEntity.status(HttpStatus.CREATED).body(resMap(key, value));
+    public static <T> ResponseEntity<T> created(T body){
+        return ResponseEntity.status(HttpStatus.CREATED).body(body);
     }
 
     /**
-     * Builds a 200 response with a message in the body under the key {@code message}.
-     *
-     * @param value the message text
-     * @return a 200 response with the message as body
-     */
-    public static ResponseEntity<Map<String, String>> okMsg(String value){
-        return ResponseEntity.ok(resMap("message", value));
-    }
-
-
-    /**
-     * Builds a 204 response with a no message in body.
+     * Builds a 204 response without a body.
      *
      * @return a 204 response
      */
-    public static ResponseEntity<Map<String, String>> okEmpty(){
-        return ResponseEntity.status(HttpStatus.NO_CONTENT).body(resMap("message", ""));
+    public static ResponseEntity<Void> okEmpty(){
+        return ResponseEntity.noContent().build();
     }
 
     /**

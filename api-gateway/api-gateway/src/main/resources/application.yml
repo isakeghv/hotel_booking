@@ -69,6 +69,15 @@ gateway:
       methods: [ GET ]
     - path: /inventory/roomtypes/{roomTypeId}/variants
       methods: [ GET ]
+    # Swagger for the inventory-service. Public for now, for browser access during development
+    - path: /inventory/swagger-ui.html
+      methods: [ GET ]
+    - path: /inventory/swagger-ui/{file}
+      methods: [ GET ]
+    - path: /inventory/v3/api-docs
+      methods: [ GET ]
+    - path: /inventory/v3/api-docs/swagger-config
+      methods: [ GET ]
 
   sign-out-paths:
     - path: /auth/signout

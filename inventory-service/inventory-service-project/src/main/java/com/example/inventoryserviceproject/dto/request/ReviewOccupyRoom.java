@@ -1,5 +1,6 @@
 package com.example.inventoryserviceproject.dto.request;
 
+import io.swagger.v3.oas.annotations.Hidden;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.NotNull;
@@ -21,6 +22,7 @@ public record ReviewOccupyRoom(
          *
          * @return true if "to" is after "from", or if either is missing
          */
+        @Hidden
         @AssertTrue(message = "Must end after it starts")
         public boolean isValidPeriod(){
                 if (from == null || to == null) return true;

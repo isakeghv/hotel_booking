@@ -1,5 +1,6 @@
 package com.example.inventoryserviceproject.dto.request;
 
+import io.swagger.v3.oas.annotations.Hidden;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotNull;
 import org.hibernate.validator.constraints.Range;
@@ -22,6 +23,7 @@ public record ReviewNewRoom(
          *
          * @return true if the room number does not end in 00
          */
+        @Hidden
         @AssertTrue(message = "Room number cannot end in 00")
         public boolean isValidRoomOnFloor(){
                 return roomNumber % 100 != 0;
