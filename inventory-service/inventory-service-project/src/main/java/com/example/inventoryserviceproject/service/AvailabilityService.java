@@ -4,22 +4,18 @@ import com.example.inventoryserviceproject.cache.CartItem;
 import com.example.inventoryserviceproject.cache.ReservedCache;
 import com.example.inventoryserviceproject.dto.request.ReviewAvailabilityQuery;
 import com.example.inventoryserviceproject.dto.request.ReviewExtraQuery;
+import com.example.inventoryserviceproject.dto.request.ReviewSearchQuery;
 import com.example.inventoryserviceproject.dto.response.AvailabilityResponse;
+import com.example.inventoryserviceproject.dto.response.AvailableRoomTypeResponse;
 import com.example.inventoryserviceproject.dto.response.ExtraAvailabilityResponse;
 import com.example.inventoryserviceproject.exception.ConflictException;
 import com.example.inventoryserviceproject.exception.InternalServerException;
 import com.example.inventoryserviceproject.exception.NotFoundException;
 import com.example.inventoryserviceproject.mapper.AvailabilityResMapper;
+import com.example.inventoryserviceproject.mapper.AvailableRoomTypeResMapper;
 import com.example.inventoryserviceproject.mapper.ExtraAvailabilityResMapper;
-import com.example.inventoryserviceproject.model.Extra;
-import com.example.inventoryserviceproject.model.OccupiedRoom;
-import com.example.inventoryserviceproject.model.Room;
-import com.example.inventoryserviceproject.model.RoomType;
-import com.example.inventoryserviceproject.model.RoomTypeVariant;
-import com.example.inventoryserviceproject.repository.ExtraRepository;
-import com.example.inventoryserviceproject.repository.OccupiedRoomRepository;
-import com.example.inventoryserviceproject.repository.RoomRepository;
-import com.example.inventoryserviceproject.repository.VariantRepository;
+import com.example.inventoryserviceproject.model.*;
+import com.example.inventoryserviceproject.repository.*;
 import com.example.inventoryserviceproject.utils.PriceUtils;
 import com.example.inventoryserviceproject.utils.RoomSelectionUtils;
 import org.springframework.beans.factory.annotation.Value;
@@ -27,12 +23,9 @@ import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.stereotype.Service;
 
 import java.time.*;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
+import java.util.function.BinaryOperator;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -51,6 +44,11 @@ public class AvailabilityService {
     private final AvailabilityResMapper availabilityResMapper;
     private final ExtraRepository extraRepository;
     private final ExtraAvailabilityResMapper extraAvailabilityResMapper;
+    private final RoomTypesRepository roomTypesRepository;
+    private final RoomBedsRepository roomBedsRepository;
+    private final BedRepository bedRepository;
+    private final ImageRepository imageRepository;
+    private final AvailableRoomTypeResMapper availableRoomTypeResMapper;
     private final LocalTime checkInTime;
     private final LocalTime checkOutTime;
 
@@ -64,6 +62,11 @@ public class AvailabilityService {
      * @param availabilityResMapper mapper that builds the availability response
      * @param extraRepository       repository for extras
      * @param extraAvailabilityResMapper mapper that builds the extra availability response
+     * @param roomTypesRepository   repository for room types
+     * @param roomBedsRepository    repository for the beds in each room type
+     * @param bedRepository         repository for bed types
+     * @param imageRepository       repository for room type images
+     * @param availableRoomTypeResMapper mapper that builds the search response
      * @param checkInTime           the hotel's check-in time, e.g. 15:00
      * @param checkOutTime          the hotel's check-out time, e.g. 12:00
      */
@@ -75,6 +78,11 @@ public class AvailabilityService {
             AvailabilityResMapper availabilityResMapper,
             ExtraRepository extraRepository,
             ExtraAvailabilityResMapper extraAvailabilityResMapper,
+            RoomTypesRepository roomTypesRepository,
+            RoomBedsRepository roomBedsRepository,
+            BedRepository bedRepository,
+            ImageRepository imageRepository,
+            AvailableRoomTypeResMapper availableRoomTypeResMapper,
             @Value("${hotel.checkin.time}") String checkInTime,
             @Value("${hotel.checkout.time}") String checkOutTime
     ){
@@ -85,6 +93,11 @@ public class AvailabilityService {
         this.availabilityResMapper = availabilityResMapper;
         this.extraRepository = extraRepository;
         this.extraAvailabilityResMapper = extraAvailabilityResMapper;
+        this.roomTypesRepository = roomTypesRepository;
+        this.roomBedsRepository = roomBedsRepository;
+        this.bedRepository = bedRepository;
+        this.imageRepository = imageRepository;
+        this.availableRoomTypeResMapper = availableRoomTypeResMapper;
         this.checkInTime = LocalTime.parse(checkInTime);
         this.checkOutTime = LocalTime.parse(checkOutTime);
     }
@@ -146,6 +159,92 @@ public class AvailabilityService {
         } catch (RedisConnectionFailureException e){
             throw new InternalServerException("Reservations are temporarily unavailable. Please try again");
         }
+    }
+
+    /**
+     * Searches for room types a customer can book for a stay. A room type is
+     * included when enough of its rooms are free for the whole stay to fit the
+     * search: at least the minimum number of rooms, and enough beds for all
+     * guests in rooms of that type alone. Read-only: nothing is reserved.
+     *
+     * <p>A room is free when it is free in the database and not held in the cache
+     * by any cart. Room types without an active variant, or without beds, are left
+     * out, as they cannot be booked. Prices use the cheapest active variant.
+     *
+     * <p>Uses a fixed number of queries regardless of the number of room types and
+     * rooms: everything is loaded in batches, then combined here.
+     *
+     * @param query the validated number of guests, minimum number of rooms and dates
+     * @return the available room types, cheapest total first, or an empty list if there are none
+     * @throws InternalServerException if the cache cannot be reached
+     */
+    public List<AvailableRoomTypeResponse> searchAvailableRoomTypes(ReviewSearchQuery query){
+        LocalDateTime from = query.from().atTime(checkInTime);
+        LocalDateTime to = query.to().atTime(checkOutTime);
+        List<LocalDate> nights = query.from().datesUntil(query.to()).toList();
+
+        // Active room types, and the cheapest active variant of each for this stay (fixed price vs per night)
+        List<RoomType> roomTypes = roomTypesRepository.findAllByIsActiveTrue();
+        Map<UUID, RoomTypeVariant> cheapestVariantByType = variantRepository
+                .findAllByRoomTypeIdInAndIsActiveTrue(roomTypes.stream().map(RoomType::getRoomTypeId).toList())
+                .stream()
+                .collect(Collectors.toMap(
+                        RoomTypeVariant::getRoomTypeId,
+                        Function.identity(),
+                        BinaryOperator.minBy(Comparator.comparingInt(
+                                variant -> PriceUtils.variantTotal(variant.getExtraPrice(), variant.isPriceFixed(), nights.size())))));
+
+        // Only room types that can be booked, i.e. have a variant
+        List<UUID> roomTypeIds = roomTypes.stream()
+                .map(RoomType::getRoomTypeId)
+                .filter(cheapestVariantByType::containsKey)
+                .toList();
+        if (roomTypeIds.isEmpty()) return List.of();
+
+        // Beds per room type, used for the capacity and the response
+        List<RoomBed> roomBeds = roomBedsRepository.findAllByIdRoomTypeIdIn(roomTypeIds);
+        Map<UUID, List<RoomBed>> roomBedsByType = roomBeds.stream().collect(Collectors.groupingBy(RoomBed::getRoomTypeId));
+        Map<UUID, Bed> bedsById = bedRepository.findAllById(roomBeds.stream().map(RoomBed::getBedId).distinct().toList())
+                .stream()
+                .collect(Collectors.toMap(Bed::getBedId, Function.identity()));
+
+        // Free rooms per room type: active, not occupied in the database, not held in the cache
+        List<Room> freeRooms = new ArrayList<>(roomRepository.findAllByRoomTypeIdInAndIsActiveTrue(roomTypeIds));
+        removeOccupiedRooms(freeRooms, from, to);
+        try {
+            removeHeldRooms(freeRooms, nights);
+        } catch (RedisConnectionFailureException e){
+            throw new InternalServerException("Searching for rooms is temporarily unavailable. Please try again");
+        }
+        Map<UUID, Long> availableByType = freeRooms.stream().collect(Collectors.groupingBy(Room::getRoomTypeId, Collectors.counting()));
+
+        // First image per room type. Sorted by image id, so it is the same image every time
+        Map<UUID, ImageData> firstImageByType = imageRepository.findAllByRoomTypeIdInOrderByImageIdAsc(roomTypeIds)
+                .stream()
+                .collect(Collectors.toMap(ImageData::getRoomTypeId, Function.identity(), (first, later) -> first));
+
+        List<AvailableRoomTypeResponse> results = new ArrayList<>();
+        for (RoomType roomType : roomTypes){
+            UUID roomTypeId = roomType.getRoomTypeId();
+            RoomTypeVariant variant = cheapestVariantByType.get(roomTypeId);
+            if (variant == null) continue;
+
+            List<RoomBed> beds = roomBedsByType.getOrDefault(roomTypeId, List.of());
+            int capacity = beds.stream().mapToInt(roomBed -> bedsById.get(roomBed.getBedId()).getCapacity() * roomBed.getAmount()).sum();
+            if (capacity == 0) continue;
+
+            // At least the minimum asked for, and enough for all guests
+            int roomsToBook = Math.max(query.rooms(), Math.ceilDiv(query.guests(), capacity));
+            int availableRooms = availableByType.getOrDefault(roomTypeId, 0L).intValue();
+            if (availableRooms < roomsToBook) continue;
+
+            results.add(availableRoomTypeResMapper.toResponse(
+                    roomType, variant, beds, bedsById, capacity, firstImageByType.get(roomTypeId),
+                    availableRooms, roomsToBook, nights.size()));
+        }
+
+        results.sort(Comparator.comparingInt(AvailableRoomTypeResponse::total));
+        return results;
     }
 
     /**
@@ -240,7 +339,20 @@ public class AvailabilityService {
      */
     private List<Room> findFreeRoomsInDatabase(UUID roomTypeId, LocalDateTime from, LocalDateTime to){
         List<Room> rooms = new ArrayList<>(roomRepository.findAllByRoomTypeIdAndIsActiveTrueOrderByRoomNumberAsc(roomTypeId));
-        if (rooms.isEmpty()) return rooms;
+        removeOccupiedRooms(rooms, from, to);
+        return rooms;
+    }
+
+    /**
+     * Removes the rooms that have an unavailable period overlapping the given
+     * one in the database. Does not check the cache.
+     *
+     * @param rooms the rooms to filter, changed in place
+     * @param from  when the period starts
+     * @param to    when the period ends
+     */
+    private void removeOccupiedRooms(List<Room> rooms, LocalDateTime from, LocalDateTime to){
+        if (rooms.isEmpty()) return;
 
         // One query for the overlapping periods of all the rooms, instead of one per room
         Set<UUID> occupiedRoomIds = occupiedRoomRepository
@@ -250,7 +362,6 @@ public class AvailabilityService {
                 .collect(Collectors.toSet());
 
         rooms.removeIf(room -> occupiedRoomIds.contains(room.getRoomId()));
-        return rooms;
     }
 
     /**

@@ -2,7 +2,9 @@ package com.example.inventoryserviceproject.controller;
 
 import com.example.inventoryserviceproject.dto.request.ReviewAvailabilityQuery;
 import com.example.inventoryserviceproject.dto.request.ReviewExtraQuery;
+import com.example.inventoryserviceproject.dto.request.ReviewSearchQuery;
 import com.example.inventoryserviceproject.dto.response.AvailabilityResponse;
+import com.example.inventoryserviceproject.dto.response.AvailableRoomTypeResponse;
 import com.example.inventoryserviceproject.dto.response.ExtraAvailabilityResponse;
 import com.example.inventoryserviceproject.service.AvailabilityService;
 import com.example.inventoryserviceproject.utils.ClientResponse;
@@ -10,12 +12,14 @@ import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 /**
  * REST controller for managing availability.
- * Contains endpoints only used internally in docker network
+ * Contains endpoints used internally in the docker network by the booking-service,
+ * and the public search for available rooms.
  */
 @RestController
 @RequestMapping("/inventory")
@@ -69,5 +73,21 @@ public class AvailabilityController {
     ){
         ExtraAvailabilityResponse extra = availabilityService.verifyExtra(userId, extraId, query);
         return ClientResponse.ok("extra", extra);
+    }
+
+    /**
+     * Searches for room types a customer can book for a stay, with prices.
+     * Public endpoint: nothing is reserved, so no user is needed. Rooms are
+     * reserved later through the booking-service.
+     *
+     * @param query the validated query: guests, minimum number of rooms, check-in and check-out dates
+     * @return a response with the available room types, cheapest total first
+     */
+    @GetMapping("/availability")
+    public ResponseEntity<Map<String, List<AvailableRoomTypeResponse>>> searchAvailableRoomTypes(
+            @Valid @ModelAttribute ReviewSearchQuery query
+    ){
+        List<AvailableRoomTypeResponse> roomTypes = availabilityService.searchAvailableRoomTypes(query);
+        return ClientResponse.ok("roomTypes", roomTypes);
     }
 }

@@ -65,6 +65,8 @@ gateway:
       methods: [POST]
     - path: /auth/signup
       methods: [POST]
+    - path: /inventory/availability
+      methods: [ GET ]
 
   sign-out-paths:
     - path: /auth/signout

@@ -10,8 +10,10 @@ import com.example.inventoryserviceproject.repository.RoomBedsRepository;
 import com.example.inventoryserviceproject.repository.RoomIncludesRepository;
 import com.example.inventoryserviceproject.dto.response.RoomTypeResponse;
 import com.example.inventoryserviceproject.repository.RoomTypesRepository;
+import com.example.inventoryserviceproject.repository.VariantRepository;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,6 +26,8 @@ import java.util.UUID;
  */
 @Service
 public class RoomTypeService {
+    private static final String DEFAULT_VARIANT_NAME = "Standard";
+
     private final RoomBedsRepository roomBedsRepository;
     private final BedRepository bedRepository;
     private final RoomTypesRepository roomTypesRepository;
@@ -31,6 +35,7 @@ public class RoomTypeService {
     private final RoomIncludesRepository roomIncludesRepository;
     private final ExtrasService extrasService;
     private final RoomTypeResMapper roomTypeResMapper;
+    private final VariantRepository variantRepository;
 
     /**
      * Creates the service with the repositories, services and mapper it uses.
@@ -42,6 +47,7 @@ public class RoomTypeService {
      * @param roomIncludesRepository repository for room-extra links
      * @param extrasService          service for extras
      * @param roomTypeResMapper      mapper that builds the room type response
+     * @param variantRepository      repository for variants
      */
     public RoomTypeService(
             RoomBedsRepository roomBedsRepository,
@@ -50,7 +56,8 @@ public class RoomTypeService {
             ImageService imageService,
             RoomIncludesRepository roomIncludesRepository,
             ExtrasService extrasService,
-            RoomTypeResMapper roomTypeResMapper
+            RoomTypeResMapper roomTypeResMapper,
+            VariantRepository variantRepository
             ){
         this.roomBedsRepository = roomBedsRepository;
         this.bedRepository = bedRepository;
@@ -59,6 +66,7 @@ public class RoomTypeService {
         this.roomIncludesRepository = roomIncludesRepository;
         this.extrasService = extrasService;
         this.roomTypeResMapper = roomTypeResMapper;
+        this.variantRepository = variantRepository;
     }
 
     /**
@@ -136,17 +144,22 @@ public class RoomTypeService {
     }
 
     /**
-     * Creates and stores a new room type.
+     * Creates and stores a new room type, together with a default variant
+     * ("Standard", no extra price). A room type can only be booked through a
+     * variant, so without one it would never be available to customers.
+     * Both are stored in one transaction, so a room type never exists without a variant.
      *
      * @param request the validated details of the new room type
      * @return the stored room type
      * @throws InternalServerException if the room type could not be saved
      */
+    @Transactional
     public RoomType createRoomType(ReviewNewRoomType request){
 
         try {
             RoomType roomType = new RoomType(request);
             roomTypesRepository.save(roomType);
+            variantRepository.save(new RoomTypeVariant(roomType.getRoomTypeId(), DEFAULT_VARIANT_NAME, 0, false));
             return roomType;
         }catch (DataAccessException e){
             throw new InternalServerException("Internal server error. Failed to save new room-type.");

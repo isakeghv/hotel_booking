@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Collection;
 import java.util.UUID;
 
 /**
@@ -20,4 +21,13 @@ public interface RoomBedsRepository extends JpaRepository<RoomBed, RoomBedsId> {
      * @return the bed links for the room type, or an empty list if there are none
      */
     List<RoomBed> findByIdRoomTypeId(UUID roomId);
+
+    /**
+     * Finds all bed links for the given room types, matched on the room type id
+     * in the composite key.
+     *
+     * @param roomTypeIds the ids of the room types
+     * @return the bed links, or an empty list if there are none
+     */
+    List<RoomBed> findAllByIdRoomTypeIdIn(Collection<UUID> roomTypeIds);
 }

@@ -5,6 +5,8 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
+import java.util.Collection;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -29,4 +31,12 @@ public interface VariantRepository extends JpaRepository<RoomTypeVariant, UUID> 
      */
     @EntityGraph(attributePaths = {"roomType"})
     Optional<RoomTypeVariant> findWithRoomTypeByVariantId(UUID variantId);
+
+    /**
+     * Finds the active variants of the given room types.
+     *
+     * @param roomTypeIds the ids of the room types
+     * @return the active variants, or an empty list if there are none
+     */
+    List<RoomTypeVariant> findAllByRoomTypeIdInAndIsActiveTrue(Collection<UUID> roomTypeIds);
 }

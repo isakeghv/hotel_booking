@@ -53,6 +53,24 @@ public class RoomTypeVariant {
     }
 
     /**
+     * Creates a new active variant with a randomly generated id. Used for the
+     * default variant created together with a room type.
+     *
+     * @param roomTypeId   the id of the room type the variant belongs to
+     * @param variantName  the name of the variant
+     * @param extraPrice   the price added on top of the room's base price
+     * @param isPriceFixed true if the extra price is per stay, false if per night
+     */
+    public RoomTypeVariant(UUID roomTypeId, String variantName, int extraPrice, boolean isPriceFixed){
+        this.variantId = UUID.randomUUID();
+        this.roomTypeId = roomTypeId;
+        this.variantName = variantName;
+        this.extraPrice = extraPrice;
+        this.isActive = true;
+        this.isPriceFixed = isPriceFixed;
+    }
+
+    /**
      * @return the unique id of the variant
      */
     public UUID getVariantId() { return variantId; }
