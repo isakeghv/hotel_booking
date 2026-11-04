@@ -7,6 +7,11 @@ import com.example.inventoryserviceproject.dto.event.BookingConfirmedEvent;
 import com.example.inventoryserviceproject.dto.event.ReservationCancelledEvent;
 import com.example.inventoryserviceproject.dto.event.ReservationItemRemovedEvent;
 import com.example.inventoryserviceproject.exception.ConflictException;
+import io.github.springwolf.bindings.kafka.annotations.KafkaAsyncOperationBinding;
+import io.github.springwolf.bindings.kafka.annotations.KafkaAsyncOperationBinding.KafkaAsyncKey;
+import io.github.springwolf.bindings.kafka.annotations.KafkaAsyncOperationBinding.KafkaAsyncMessageBinding;
+import io.github.springwolf.core.asyncapi.annotations.AsyncListener;
+import io.github.springwolf.core.asyncapi.annotations.AsyncOperation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -30,6 +35,10 @@ import java.util.UUID;
  * its own event type. Malformed messages are skipped, as retrying them cannot
  * succeed. If Redis or the database cannot be reached, the error is thrown so
  * Kafka retries.
+ *
+ * <p>Each listener is documented for Springwolf with {@link AsyncListener},
+ * shown at /inventory/springwolf/asyncapi-ui.html. The listeners take a raw
+ * String, so the payload type is given there explicitly.
  */
 @Service
 public class ReservationEventService {
@@ -58,6 +67,22 @@ public class ReservationEventService {
      *
      * @param message the event as JSON, e.g. {"userId": "..."}
      */
+    @AsyncListener(operation = @AsyncOperation(
+            channelName = "reservation-confirmed",
+            description = """
+                    Sent when a user has paid and completed a booking. Stores every room in the user's cart as booked \
+                    in the database (one occupation per cart item, using the itemId as its id), then releases the cart.
+
+                    - The cart is read from the inventory-service's own cache. The event only names the user.
+                    - Safe to receive twice: an already handled event finds an empty cart and is ignored.
+                    - If the cart has expired (30 minutes after the first room was added), nothing is stored. \
+                    The booking-service must confirm before its own 25-minute limit.
+                    - If a room can no longer be stored (conflict), nothing is stored and the cart is left to expire. \
+                    The booking-service is not told yet.
+                    - Malformed messages are skipped. If Redis or the database is down, Kafka retries.""",
+            payloadType = BookingConfirmedEvent.class))
+    @KafkaAsyncOperationBinding(groupId = "inventory-service-group",
+            messageBinding = @KafkaAsyncMessageBinding(key = @KafkaAsyncKey(description = "The user id", example = "3fa85f64-5717-4562-b3fc-2c963f66afa6")))
     @KafkaListener(topics = "reservation-confirmed", groupId = "inventory-service-group")
     public void onBookingConfirmed(String message){
         Optional<BookingConfirmedEvent> event = parse(message, BookingConfirmedEvent.class, "reservation-confirmed");
@@ -89,6 +114,17 @@ public class ReservationEventService {
      *
      * @param message the event as JSON, e.g. {"itemIds": ["...", "..."]}
      */
+    @AsyncListener(operation = @AsyncOperation(
+            channelName = "booking-cancelled",
+            description = """
+                    Sent when a completed (paid) booking is cancelled. Deletes the booked occupations of the given items, \
+                    so the rooms are available again. Not used for unpaid reservations: use reservation-cancelled.
+
+                    - Only booked occupations are deleted. Periods blocked by staff are never touched.
+                    - Safe to receive twice: items already cancelled, or unknown item ids, are ignored.
+                    - Malformed messages, and messages without itemIds, are skipped. If the database is down, Kafka retries.""",
+            payloadType = BookingCancelledEvent.class))
+    @KafkaAsyncOperationBinding(groupId = "inventory-service-group")
     @KafkaListener(topics = "booking-cancelled", groupId = "inventory-service-group")
     public void onBookingCancelled(String message){
         Optional<BookingCancelledEvent> event = parse(message, BookingCancelledEvent.class, "booking-cancelled");
@@ -107,6 +143,17 @@ public class ReservationEventService {
      *
      * @param message the event as JSON, e.g. {"userId": "...", "itemId": "..."}
      */
+    @AsyncListener(operation = @AsyncOperation(
+            channelName = "reservation-item-remove",
+            description = """
+                    Sent when a user removes one room from their cart before paying. Releases that room so others can reserve it.
+
+                    - When the last room is removed, the whole cart is deleted.
+                    - Safe to receive twice: an item that is already removed, or has expired, is ignored.
+                    - Malformed messages, and messages without userId or itemId, are skipped. If Redis is down, Kafka retries.""",
+            payloadType = ReservationItemRemovedEvent.class))
+    @KafkaAsyncOperationBinding(groupId = "inventory-service-group",
+            messageBinding = @KafkaAsyncMessageBinding(key = @KafkaAsyncKey(description = "The user id", example = "3fa85f64-5717-4562-b3fc-2c963f66afa6")))
     @KafkaListener(topics = "reservation-item-remove", groupId = "inventory-service-group")
     public void onReservationItemRemoved(String message){
         Optional<ReservationItemRemovedEvent> event = parse(message, ReservationItemRemovedEvent.class, "reservation-item-remove");
@@ -123,6 +170,17 @@ public class ReservationEventService {
      *
      * @param message the event as JSON, e.g. {"userId": "..."}
      */
+    @AsyncListener(operation = @AsyncOperation(
+            channelName = "reservation-cancelled",
+            description = """
+                    Sent when a user cancels a reservation before paying. Releases every room in the user's cart \
+                    and deletes the cart. Not used for paid bookings: use booking-cancelled.
+
+                    - Safe to receive twice: an already released or expired cart is ignored.
+                    - Malformed messages, and messages without userId, are skipped. If Redis is down, Kafka retries.""",
+            payloadType = ReservationCancelledEvent.class))
+    @KafkaAsyncOperationBinding(groupId = "inventory-service-group",
+            messageBinding = @KafkaAsyncMessageBinding(key = @KafkaAsyncKey(description = "The user id", example = "3fa85f64-5717-4562-b3fc-2c963f66afa6")))
     @KafkaListener(topics = "reservation-cancelled", groupId = "inventory-service-group")
     public void onReservationCancelled(String message){
         Optional<ReservationCancelledEvent> event = parse(message, ReservationCancelledEvent.class, "reservation-cancelled");

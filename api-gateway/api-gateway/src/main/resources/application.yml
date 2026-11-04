@@ -79,6 +79,14 @@ gateway:
     - path: /inventory/v3/api-docs/swagger-config
       methods: [ GET ]
 
+    # Springwolf for inventory-service, public for now, for browser access during development
+    - path: /inventory/springwolf/{file}
+      methods: [ GET ]
+    - path: /inventory/springwolf/assets/{file}
+      methods: [ GET ]
+    - path: /inventory/springwolf/media/{file}
+      methods: [ GET ]
+
   sign-out-paths:
     - path: /auth/signout
       methods: [POST]

@@ -15,4 +15,5 @@ This project is set up to be run with docker. Install docker if not already inst
   - Run from current location
   - Use command `docker compose up --build`
 4. Documentation can be found at
-  - [inventory Swagger doc](http://localhost:8080/inventory/swagger-ui/index.html)
+  - [Inventory Swagger doc](http://localhost:8080/inventory/swagger-ui/index.html)
+  - [Inventory kafka doc](http://localhost:8080/inventory/springwolf/asyncapi-ui.html)

@@ -39,7 +39,8 @@ public class OpenApiConfig {
             for **30 minutes** from the first room added, and returns an `itemId` per room. Store these.
             4. Customer adds extras: `GET /inventory/availability/extras/{extraId}` prices an extra for the stay in the cart.
             5. Kafka events finish the flow: `reservation-confirmed` stores the rooms, `reservation-item-remove` removes one \
-            room, `reservation-cancelled` releases the whole cart, `booking-cancelled` frees the rooms of a paid booking.
+            room, `reservation-cancelled` releases the whole cart, `booking-cancelled` frees the rooms of a paid booking. \
+            Payloads and behaviour: [Kafka documentation](/inventory/springwolf/asyncapi-ui.html).
 
             ## Conventions
             - **Responses** are wrapped in an object with one key, e.g. `{"roomTypes": [...]}`. The key is named in each endpoint.
