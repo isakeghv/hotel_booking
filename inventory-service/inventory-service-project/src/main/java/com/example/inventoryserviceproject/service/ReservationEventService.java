@@ -4,6 +4,7 @@ import com.example.inventoryserviceproject.cache.CartItem;
 import com.example.inventoryserviceproject.cache.ReservedCache;
 import com.example.inventoryserviceproject.dto.event.BookingConfirmedEvent;
 import com.example.inventoryserviceproject.dto.event.ReservationCancelledEvent;
+import com.example.inventoryserviceproject.dto.event.ReservationItemRemovedEvent;
 import com.example.inventoryserviceproject.exception.ConflictException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,9 +19,10 @@ import java.util.UUID;
 
 /**
  * Service handling events from the booking-service about reservations: storing
- * reserved rooms when a booking is confirmed, and releasing them when a
- * reservation is cancelled. Only the entry point for the events; the work is
- * done by {@link RoomService} (database) and {@link ReservedCache} (cache).
+ * reserved rooms when a booking is confirmed, releasing one room when it is
+ * removed from a cart, and releasing all of them when a reservation is cancelled.
+ * Only the entry point for the events; the work is done by {@link RoomService}
+ * (database) and {@link ReservedCache} (cache).
  *
  * <p>Messages are read as text and converted here, so each listener decides
  * its own event type. Malformed messages are skipped, as retrying them cannot
@@ -77,6 +79,22 @@ public class ReservationEventService {
         }
 
         reservedCache.releaseCart(userId);
+    }
+
+    /**
+     * Removes one room from a user's cart and releases it, when the user removes
+     * it from their cart in the booking-service before completing the booking.
+     *
+     * @param message the event as JSON, e.g. {"userId": "...", "itemId": "..."}
+     */
+    @KafkaListener(topics = "reservation-item-remove", groupId = "inventory-service-group")
+    public void onReservationItemRemoved(String message){
+        Optional<ReservationItemRemovedEvent> event = parse(message, ReservationItemRemovedEvent.class, "reservation-item-remove");
+        if (event.isEmpty() || event.get().userId() == null || event.get().itemId() == null) return;
+
+        boolean removed = reservedCache.removeCartItem(event.get().userId(), event.get().itemId());
+        if (removed) log.info("Removed item {} from the cart of user {}", event.get().itemId(), event.get().userId());
+        else log.info("Item {} was not in the cart of user {}: already removed or expired", event.get().itemId(), event.get().userId());
     }
 
     /**

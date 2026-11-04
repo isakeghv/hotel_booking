@@ -180,14 +180,50 @@ public class ReservedCache {
 
         // Holds first, cart last: if this stops halfway, the cart still lists the holds, so a retry can release them
         if (!items.isEmpty()){
-            List<String> holdKeys = items.stream()
-                    .flatMap(item -> item.from().toLocalDate().datesUntil(item.to().toLocalDate())
-                            .map(night -> holdKey(item.roomId(), night)))
-                    .toList();
-            redis.delete(holdKeys);
+            redis.delete(items.stream().flatMap(item -> holdKeys(item).stream()).toList());
         }
         redis.delete(CART_PREFIX + userId);
         return items.size();
+    }
+
+    /**
+     * Removes one item from the user's cart, and releases the holds on its room.
+     * The item is only looked up in the user's own cart, so a user can never
+     * remove another user's item. Safe to call several times.
+     *
+     * <p>If it was the last item, the whole cart is removed, so the next room
+     * added starts a new 30 minutes instead of continuing the old expiry.
+     *
+     * @param userId the id of the user
+     * @param itemId the id of the cart item
+     * @return true if the item was removed, false if it was not in the cart
+     */
+    public boolean removeCartItem(UUID userId, UUID itemId){
+        String key = CART_PREFIX + userId;
+        String field = ITEM_FIELD_PREFIX + itemId;
+
+        Object stored = redis.opsForHash().get(key, field);
+        if (stored == null) return false;
+        CartItem item = jsonMapper.readValue((String) stored, CartItem.class);
+
+        // Holds first, item last: if this stops halfway, the cart still lists the item, so a retry can release it
+        redis.delete(holdKeys(item));
+        redis.opsForHash().delete(key, field);
+
+        // Only the expiry field left, i.e. no items
+        Long fieldsLeft = redis.opsForHash().size(key);
+        if (fieldsLeft != null && fieldsLeft <= 1) redis.delete(key);
+        return true;
+    }
+
+    /**
+     * @param item a cart item
+     * @return the keys holding the item's room, one per night of its stay
+     */
+    private List<String> holdKeys(CartItem item){
+        return item.from().toLocalDate().datesUntil(item.to().toLocalDate())
+                .map(night -> holdKey(item.roomId(), night))
+                .toList();
     }
 
     /**
