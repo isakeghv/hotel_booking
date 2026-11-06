@@ -1,0 +1,49 @@
+package com.example.bookingserviceproject.controller;
+
+import com.example.bookingserviceproject.dto.request.ReviewAddRooms;
+import com.example.bookingserviceproject.dto.response.CartResponse;
+import com.example.bookingserviceproject.dto.response.Envelopes;
+import com.example.bookingserviceproject.service.CartService;
+import com.example.bookingserviceproject.utils.ClientResponse;
+import jakarta.validation.Valid;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
+
+/**
+ * REST controller for the signed-in user's cart: the rooms the user is about
+ * to book. The user is always taken from the {@code X-User-Id} header set by
+ * the gateway, never from the body or path.
+ */
+@RestController
+@RequestMapping("/booking/cart")
+public class CartController {
+    private final CartService cartService;
+
+    /**
+     * Creates the controller with the service it delegates to.
+     *
+     * @param cartService service containing the cart's business logic
+     */
+    public CartController(CartService cartService){
+        this.cartService = cartService;
+    }
+
+    /**
+     * Adds rooms of one variant to the user's cart. The rooms are held by the
+     * inventory-service, so no one else can book them while they are in the cart.
+     *
+     * @param request the validated request: variant, amount of rooms and dates
+     * @param userId  the id of the signed-in user, set by the gateway
+     * @return a response with the whole cart after the rooms were added
+     */
+    @PostMapping("/rooms")
+    public ResponseEntity<Envelopes.CartResult> addRooms(
+            @Valid @RequestBody ReviewAddRooms request,
+            @RequestHeader("X-User-Id") UUID userId
+    ){
+        CartResponse cart = cartService.addRooms(userId, request);
+        return ClientResponse.ok(new Envelopes.CartResult(cart));
+    }
+}

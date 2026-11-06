@@ -6,8 +6,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import tools.jackson.databind.exc.InvalidFormatException;
 import tools.jackson.databind.exc.MismatchedInputException;
@@ -128,5 +130,52 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(UnauthenticatedException.class)
     public ResponseEntity<Map<String, String>> handleUnauthenticatedException(UnauthenticatedException e){
         return ClientResponse.unAuthenticated(e.getMessage());
+    }
+
+    /**
+     * Handles {@link ServiceUnavailableException}.
+     *
+     * @param e the thrown exception
+     * @return a 503 response with the exception message
+     */
+    @ExceptionHandler(ServiceUnavailableException.class)
+    public ResponseEntity<Map<String, String>> handleServiceUnavailableException(ServiceUnavailableException e){
+        return ClientResponse.serviceUnavailable(e.getMessage());
+    }
+
+    /**
+     * Handles {@link PassThroughException}: another service's refusal, passed on unchanged.
+     *
+     * @param e the thrown exception
+     * @return a response with the other service's status and message
+     */
+    @ExceptionHandler(PassThroughException.class)
+    public ResponseEntity<Map<String, String>> handlePassThroughException(PassThroughException e){
+        return ClientResponse.status(e.getStatus(), e.getMessage());
+    }
+
+    /**
+     * Handles requests without a required header. A missing {@code X-User-Id}
+     * means the request did not come through the gateway as a signed-in user.
+     *
+     * @param ex the exception thrown when the header is missing
+     * @return a 401 response if {@code X-User-Id} is missing, otherwise a 400 response
+     */
+    @ExceptionHandler(MissingRequestHeaderException.class)
+    public ResponseEntity<Map<String, String>> handleMissingHeader(MissingRequestHeaderException ex){
+        if ("X-User-Id".equalsIgnoreCase(ex.getHeaderName())) return ClientResponse.unAuthenticated("You must be signed in");
+        return ClientResponse.badRequest("Header '" + ex.getHeaderName() + "' is required");
+    }
+
+    /**
+     * Handles a path variable, query parameter or header that cannot be
+     * converted to its type, e.g. an invalid UUID.
+     *
+     * @param ex the exception thrown when the value could not be converted
+     * @return a 400 response naming the invalid value
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<Map<String, String>> handleTypeMismatch(MethodArgumentTypeMismatchException ex){
+        return ClientResponse.badRequest("'" + ex.getName() + "' has an invalid value");
     }
 }

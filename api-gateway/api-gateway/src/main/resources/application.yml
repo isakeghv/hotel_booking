@@ -106,6 +106,9 @@ gateway:
       allowed-levels: [0, 1, 2, 3]
 
   route-permissions:
+    - path: /booking/cart/rooms
+      methods: [ POST ]
+      allowed-levels: [ 0 ]
     - path: /inventory/beds
       methods: [GET, POST]
       allowed-levels: [2, 3]
