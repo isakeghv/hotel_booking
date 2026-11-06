@@ -39,10 +39,20 @@ spring:
                     redis-rate-limiter.replenishRate: 10
                     redis-rate-limiter.burstCapacity: 20
 
-            - id: inventory-service
+            - id: image-service
               uri: http://image-service:3003
               predicates:
                 - Path=/images/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 10
+                    redis-rate-limiter.burstCapacity: 20
+
+            - id: booking-service
+              uri: http://booking-service:3004
+              predicates:
+                - Path=/booking/**
               filters:
                 - name: RequestRateLimiter
                   args:
