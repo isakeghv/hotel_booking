@@ -3,7 +3,7 @@
 ## Setup
 Create a .env in current folder, and add:
 ```
-- POSTGRES_DB=[url to booking-db]
+- POSTGRES_DB=[booking-db-name]
 - POSTGRES_PASSWORD=[booking-db username]
 - POSTGRES_USER=[booking-db password]
 ```
