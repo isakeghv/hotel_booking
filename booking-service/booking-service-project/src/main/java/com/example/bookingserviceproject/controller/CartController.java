@@ -46,4 +46,17 @@ public class CartController {
         CartResponse cart = cartService.addRooms(userId, request);
         return ClientResponse.ok(new Envelopes.CartResult(cart));
     }
+
+    /**
+     * Retrieves the user's cart. A missing or expired cart is returned as an
+     * empty cart, not an error.
+     *
+     * @param userId the id of the signed-in user, set by the gateway
+     * @return a response with the cart
+     */
+    @GetMapping
+    public ResponseEntity<Envelopes.CartResult> getCart(@RequestHeader("X-User-Id") UUID userId){
+        CartResponse cart = cartService.getCart(userId);
+        return ClientResponse.ok(new Envelopes.CartResult(cart));
+    }
 }

@@ -104,6 +104,18 @@ public class CartService {
     }
 
     /**
+     * Retrieves the user's cart. Nothing is asked from the inventory-service:
+     * names and prices were stored when the rooms were added.
+     *
+     * @param userId the id of the user
+     * @return the cart, or an empty cart if the user has none or it has expired
+     */
+    public CartResponse getCart(UUID userId){
+        CartContents cart = fromCache(() -> bookingCart.getCart(userId));
+        return cartResMapper.toResponse(cart);
+    }
+
+    /**
      * @param expiresAt when the cart expires
      * @return true if there is too little time left to add rooms and still pay for them
      */
