@@ -162,6 +162,16 @@ public class BookingCart {
     }
 
     /**
+     * Deletes the user's whole cart, with its rooms and extras. The next room
+     * added starts a new cart with a new bookingId.
+     *
+     * @param userId the id of the user
+     */
+    public void deleteCart(UUID userId){
+        redis.delete(cartKey(userId));
+    }
+
+    /**
      * Retrieves everything in the user's cart in one request to Redis.
      *
      * @param userId the id of the user

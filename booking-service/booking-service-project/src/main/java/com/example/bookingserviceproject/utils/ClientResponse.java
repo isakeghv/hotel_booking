@@ -30,6 +30,15 @@ public class ClientResponse {
     }
 
     /**
+     * Builds a 204 response without a body.
+     *
+     * @return a 204 response
+     */
+    public static ResponseEntity<Void> noContent(){
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
      * Builds a 503 response with an error message in the body under the key {@code err}.
      *
      * @param value the error message

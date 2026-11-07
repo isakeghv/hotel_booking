@@ -62,6 +62,18 @@ public class CartController {
     }
 
     /**
+     * Empties the user's cart. All rooms are released in the inventory-service.
+     *
+     * @param userId the id of the signed-in user, set by the gateway
+     * @return a 204 response without a body
+     */
+    @DeleteMapping
+    public ResponseEntity<Void> emptyCart(@RequestHeader("X-User-Id") UUID userId){
+        cartService.emptyCart(userId);
+        return ClientResponse.noContent();
+    }
+
+    /**
      * Removes one room, and the extras on it, from the user's cart. The room
      * is released in the inventory-service, so others can book it again.
      *

@@ -1,7 +1,10 @@
 package com.example.bookingserviceproject.messaging;
 
+import com.example.bookingserviceproject.dto.event.ReservationCancelledEvent;
 import com.example.bookingserviceproject.dto.event.ReservationItemRemoveEvent;
 import com.example.bookingserviceproject.exception.EventPublishException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.json.JsonMapper;
@@ -15,7 +18,9 @@ import java.util.concurrent.ExecutionException;
  */
 @Component
 public class InventoryEventPublisher {
+    private static final Logger log = LoggerFactory.getLogger(InventoryEventPublisher.class);
     private static final String RESERVATION_ITEM_REMOVE = "reservation-item-remove";
+    private static final String RESERVATION_CANCELLED = "reservation-cancelled";
 
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final JsonMapper jsonMapper;
@@ -44,6 +49,17 @@ public class InventoryEventPublisher {
     }
 
     /**
+     * Tells inventory that the user emptied the cart, so it releases all rooms.
+     * Does not wait for Kafka, and never throws: a failure is only logged, and
+     * inventory releases the rooms itself when its cart expires.
+     *
+     * @param userId the id of the user
+     */
+    public void reservationCancelled(UUID userId){
+        sendWithoutWaiting(RESERVATION_CANCELLED, userId.toString(), new ReservationCancelledEvent(userId));
+    }
+
+    /**
      * Sends an event and waits for Kafka to confirm it. How long it can take is
      * limited by the producer's timeouts in application.properties (about 5 seconds).
      *
@@ -61,6 +77,26 @@ public class InventoryEventPublisher {
         } catch (ExecutionException | RuntimeException e){
             // RuntimeException: send() itself fails when Kafka cannot be reached within max.block.ms
             throw new EventPublishException(topic, e);
+        }
+    }
+
+    /**
+     * Sends an event without waiting for Kafka to confirm it, for events the
+     * response does not depend on. A failure is only logged. send() itself can
+     * still block for up to max.block.ms (5 s) if Kafka cannot be reached.
+     *
+     * @param topic the topic to send to
+     * @param key   the key of the event
+     * @param event the event, converted to JSON
+     */
+    private void sendWithoutWaiting(String topic, String key, Object event){
+        try {
+            kafkaTemplate.send(topic, key, jsonMapper.writeValueAsString(event))
+                    .whenComplete((result, e) -> {
+                        if (e != null) log.error("Could not send event to {} with key {}", topic, key, e);
+                    });
+        } catch (RuntimeException e){
+            log.error("Could not send event to {} with key {}", topic, key, e);
         }
     }
 }

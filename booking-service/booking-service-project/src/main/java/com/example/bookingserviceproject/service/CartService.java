@@ -241,6 +241,33 @@ public class CartService {
     }
 
     /**
+     * Empties the user's cart, and tells the inventory-service to release all rooms.
+     *
+     * @param userId the id of the user
+     * @throws ConflictException if the booking is being completed
+     * @throws NotFoundException if the user has no cart, or it is empty or expired
+     */
+    public void emptyCart(UUID userId){
+        CartContents cart = fromCache(() -> bookingCart.getCart(userId));
+        // Emptying the cart while it is being paid for must never be possible
+        if (cart.completed()) throw new ConflictException(BOOKING_IN_PROGRESS);
+        if (cart.isEmpty()) throw new NotFoundException("Your cart is empty");
+
+        try {
+            bookingCart.deleteCart(userId);
+        } catch (DataAccessException e){
+            log.error("Could not delete the cart of user {} in the booking cache", userId, e);
+            throw new InternalServerException("Your cart could not be emptied. Please try again");
+        }
+
+        // Our cart is emptied FIRST, and inventory is told afterwards, without waiting. Unlike removing one room,
+        // a failed event does not stop the request: the user wants everything gone, and our cart already is.
+        // Inventory releases the rooms itself when its cart expires (30 minutes at most), so emptying the cart
+        // keeps working when Kafka or inventory is down. A failure is logged by the publisher
+        inventoryEventPublisher.reservationCancelled(userId);
+    }
+
+    /**
      * @param expiresAt when the cart expires
      * @return true if there is too little time left to add rooms and still pay for them
      */
