@@ -198,7 +198,7 @@ public class CartService {
                 .map(existing -> cartAddonMapper.withAmount(existing, amount))
                 .orElseGet(() -> {
                     InventoryExtraPrice price = inventoryClient.priceExtra(userId, extraId, amount);
-                    return cartAddonMapper.toCartAddon(price, item);
+                    return cartAddonMapper.toCartAddon(price, item, amount);
                 });
 
         try {

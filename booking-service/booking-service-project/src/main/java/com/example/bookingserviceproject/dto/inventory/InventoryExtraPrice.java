@@ -7,17 +7,15 @@ import java.util.UUID;
 /**
  * An extra priced by the inventory-service, as returned by
  * {@code GET /inventory/availability/extras/{extraId}}. Nothing is held in
- * inventory. Only the fields the booking-service uses are read.
+ * inventory. Only the fields the booking-service uses are read: inventory's
+ * {@code amount} and {@code total} are ignored, as the total is calculated for
+ * the room's own nights from the unit price.
  *
- * @param extra  the extra, with its price per unit
- * @param amount how many of the extra were priced
- * @param total  the price of the extra for the whole stay, in USD
+ * @param extra the extra, with its price per unit
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record InventoryExtraPrice(
-        Extra extra,
-        int amount,
-        int total
+        Extra extra
 ) {
     /**
      * The extra.
