@@ -31,7 +31,8 @@ public record CartResponse(
      * @param from     check-in date and time
      * @param to       check-out date and time
      * @param nights   the number of nights
-     * @param total    the price of the room for the whole stay
+     * @param total    the price of the room for the whole stay, without extras
+     * @param extras   the extras added to this room. Always present, empty if the room has none
      */
     public record Item(
             UUID itemId,
@@ -40,6 +41,22 @@ public record CartResponse(
             LocalDateTime from,
             LocalDateTime to,
             int nights,
+            int total,
+            List<Extra> extras
+    ) {}
+
+    /**
+     * One extra added to a room in the cart.
+     *
+     * @param extraId the id of the extra, used to add more of it or remove it
+     * @param name    the name of the extra
+     * @param amount  how many of the extra are added
+     * @param total   the price of the extra for the whole stay
+     */
+    public record Extra(
+            UUID extraId,
+            String name,
+            int amount,
             int total
     ) {}
 }

@@ -56,6 +56,8 @@ public class CartResMapper {
                 item.from(),
                 item.to(),
                 item.nights(),
-                item.total());
+                item.total(),
+                // Filled from the cart's addon fields when the extras endpoints are added
+                List.of());
     }
 }
