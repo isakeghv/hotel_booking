@@ -22,6 +22,7 @@ public class ImageData {
     private String fileName;
     private String imageText;
     private String altText;
+    private boolean isPrimary;
 
     /**
      * Creates an empty image record. Required by JPA.
@@ -34,9 +35,10 @@ public class ImageData {
      *
      * @param imgData       the validated image metadata
      * @param fileExtension the file extension without a dot, e.g. {@code png}
-     * @param roomTypeId        the id of the room type the image belongs to
+     * @param roomTypeId    the id of the room type the image belongs to
+     * @param isPrimary     whether the image is the room type's primary image
      */
-    public ImageData(ReviewImageData imgData, String fileExtension, UUID roomTypeId){
+    public ImageData(ReviewImageData imgData, String fileExtension, UUID roomTypeId, boolean isPrimary){
         UUID imageId = UUID.randomUUID();
 
         this.imageId = imageId;
@@ -44,6 +46,7 @@ public class ImageData {
         this.fileName = imageId + "." + fileExtension;
         this.imageText = imgData.imageText();
         this.altText = imgData.altText();
+        this.isPrimary = isPrimary;
     }
 
     /**
@@ -95,4 +98,14 @@ public class ImageData {
      * @param altText the alternative text describing the image
      */
     public void setAltText(String altText) { this.altText = altText; }
+
+    /**
+     * @return whether the image is the room type's primary image, shown when the room type is listed
+     */
+    public boolean getIsPrimary() { return isPrimary; }
+
+    /**
+     * @param isPrimary whether the image is the room type's primary image
+     */
+    public void setIsPrimary(boolean isPrimary) { this.isPrimary = isPrimary; }
 }

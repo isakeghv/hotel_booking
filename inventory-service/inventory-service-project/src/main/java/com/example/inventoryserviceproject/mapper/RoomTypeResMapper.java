@@ -32,7 +32,7 @@ public class RoomTypeResMapper {
      * @param info     the room type entity
      * @param beds     the bed types used in the room type
      * @param roomBeds the links stating how many of each bed the room has
-     * @param images   the images belonging to the room type
+     * @param images   the images belonging to the room type, with the primary image first
      * @return the response object
      */
     public RoomTypeResponse toResponse(RoomType info, List<Bed> beds, List<RoomBed> roomBeds, List<ImageData> images) {
@@ -50,9 +50,11 @@ public class RoomTypeResMapper {
 
         List<RoomTypeResponse.Image> imageInfos = images.stream()
                 .map(img -> new RoomTypeResponse.Image(
+                        img.getImageId(),
                         imageBaseUrl + img.getFileName(),
                         img.getImageText(),
-                        img.getAltText()))
+                        img.getAltText(),
+                        img.getIsPrimary()))
                 .toList();
 
         return new RoomTypeResponse(

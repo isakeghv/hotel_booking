@@ -17,7 +17,7 @@ import java.util.UUID;
  * @param description    the room type's main description, empty (null title, no lines) if it has none
  * @param capacity       how many people one room of this type sleeps
  * @param beds           the beds in one room of this type
- * @param image          the room type's first image, or null if it has none
+ * @param image          the room type's primary image, or null if it has none
  * @param availableRooms how many rooms of this type are free for the whole stay
  * @param roomsToBook    how many rooms of this type the customer needs to book to fit
  *                       their search: at least the minimum number of rooms they asked for,
@@ -43,7 +43,7 @@ public record AvailableRoomTypeResponse(
         int capacity,
         @Schema(description = "Beds in one room, e.g. shown as \"2 x Single bed, 1 person\"")
         List<BedInfo> beds,
-        @Schema(description = "First image of the room type, or null if it has none")
+        @Schema(description = "Primary image of the room type, or null if it has none")
         Image image,
         @Schema(description = "How many rooms of this type are free for the whole stay", example = "5")
         int availableRooms,

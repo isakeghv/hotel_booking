@@ -39,7 +39,7 @@ public class AvailableRoomTypeResMapper {
      * @param roomBeds       the links stating how many of each bed the room type has
      * @param bedsById       the bed types used in the room type, by id
      * @param capacity       how many people one room sleeps
-     * @param image          the room type's first image, or null if it has none
+     * @param image          the room type's primary image, or null if it has none
      * @param availableRooms how many rooms of the type are free for the stay
      * @param roomsToBook    how many rooms the customer needs to book to fit their search
      * @param nights         the number of nights in the stay

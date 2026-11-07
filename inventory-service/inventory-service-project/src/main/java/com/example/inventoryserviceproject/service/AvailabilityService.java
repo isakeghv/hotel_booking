@@ -226,10 +226,10 @@ public class AvailabilityService {
                 .stream()
                 .collect(Collectors.toMap(RoomInformation::getRoomTypeId, Function.identity()));
 
-        // First image per room type. Sorted by image id, so it is the same image every time
-        Map<UUID, ImageData> firstImageByType = imageRepository.findAllByRoomTypeIdInOrderByImageIdAsc(roomTypeIds)
+        // Primary image per room type. The database allows at most one per room type
+        Map<UUID, ImageData> primaryImageByType = imageRepository.findAllByRoomTypeIdInAndIsPrimaryTrue(roomTypeIds)
                 .stream()
-                .collect(Collectors.toMap(ImageData::getRoomTypeId, Function.identity(), (first, later) -> first));
+                .collect(Collectors.toMap(ImageData::getRoomTypeId, Function.identity()));
 
         List<AvailableRoomTypeResponse> results = new ArrayList<>();
         for (RoomType roomType : roomTypes){
@@ -247,7 +247,7 @@ public class AvailabilityService {
             if (availableRooms < roomsToBook) continue;
 
             results.add(availableRoomTypeResMapper.toResponse(
-                    roomType, descriptionByType.get(roomTypeId), variant, beds, bedsById, capacity, firstImageByType.get(roomTypeId),
+                    roomType, descriptionByType.get(roomTypeId), variant, beds, bedsById, capacity, primaryImageByType.get(roomTypeId),
                     availableRooms, roomsToBook, nights.size()));
         }
 
