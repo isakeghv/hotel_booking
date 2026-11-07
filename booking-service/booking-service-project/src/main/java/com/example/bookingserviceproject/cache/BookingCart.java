@@ -125,6 +125,18 @@ public class BookingCart {
     }
 
     /**
+     * Removes an extra from a room in the user's cart. Deleting a field that
+     * no longer exists does nothing, and never creates the cart again.
+     *
+     * @param userId  the id of the user
+     * @param itemId  the id of the room
+     * @param extraId the id of the extra
+     */
+    public void removeAddon(UUID userId, UUID itemId, UUID extraId){
+        redis.opsForHash().delete(cartKey(userId), addonField(itemId, extraId));
+    }
+
+    /**
      * Removes one room and its extras from the user's cart. When no rooms are
      * left, the whole cart is deleted, so the next room added starts a new cart.
      *

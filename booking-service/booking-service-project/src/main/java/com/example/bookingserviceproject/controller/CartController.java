@@ -98,4 +98,22 @@ public class CartController {
         CartResponse cart = cartService.setExtra(userId, itemId, extraId, request.amount());
         return ClientResponse.ok(new Envelopes.CartResult(cart));
     }
+
+    /**
+     * Removes an extra from a room in the user's cart.
+     *
+     * @param itemId  the id of the room in the cart
+     * @param extraId the id of the extra
+     * @param userId  the id of the signed-in user, set by the gateway
+     * @return a response with the whole cart after the extra was removed
+     */
+    @DeleteMapping("/rooms/{itemId}/extras/{extraId}")
+    public ResponseEntity<Envelopes.CartResult> removeExtra(
+            @PathVariable UUID itemId,
+            @PathVariable UUID extraId,
+            @RequestHeader("X-User-Id") UUID userId
+    ){
+        CartResponse cart = cartService.removeExtra(userId, itemId, extraId);
+        return ClientResponse.ok(new Envelopes.CartResult(cart));
+    }
 }

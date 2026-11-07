@@ -213,6 +213,34 @@ public class CartService {
     }
 
     /**
+     * Removes an extra from a room in the user's cart. Nothing is sent to the
+     * inventory-service, as extras are not held there.
+     *
+     * @param userId  the id of the user
+     * @param itemId  the id of the room in the cart
+     * @param extraId the id of the extra
+     * @return the cart after the extra was removed
+     * @throws ConflictException if the booking is being completed
+     * @throws NotFoundException if the room is not in the user's cart, or the room does not have the extra
+     */
+    public CartResponse removeExtra(UUID userId, UUID itemId, UUID extraId){
+        CartContents cart = fromCache(() -> bookingCart.getCart(userId));
+        if (cart.completed()) throw new ConflictException(BOOKING_IN_PROGRESS);
+        // Also covers an expired cart, and stops changes to rooms that are not this user's
+        if (!cart.contains(itemId)) throw new NotFoundException("The room is not in your cart");
+        if (cart.findAddon(itemId, extraId).isEmpty()) throw new NotFoundException("The room does not have this extra");
+
+        try {
+            bookingCart.removeAddon(userId, itemId, extraId);
+        } catch (DataAccessException e){
+            log.error("Could not remove extra {} from room {} for user {} in the booking cache", extraId, itemId, userId, e);
+            throw new InternalServerException("The extra could not be removed from your cart. Please try again");
+        }
+
+        return getCart(userId);
+    }
+
+    /**
      * @param expiresAt when the cart expires
      * @return true if there is too little time left to add rooms and still pay for them
      */
