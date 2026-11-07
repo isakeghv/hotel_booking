@@ -1,9 +1,11 @@
 package com.example.bookingserviceproject.service;
 
 import com.example.bookingserviceproject.cache.BookingCart;
+import com.example.bookingserviceproject.cache.CartAddon;
 import com.example.bookingserviceproject.cache.CartContents;
 import com.example.bookingserviceproject.cache.CartItem;
 import com.example.bookingserviceproject.client.InventoryClient;
+import com.example.bookingserviceproject.dto.inventory.InventoryExtraPrice;
 import com.example.bookingserviceproject.dto.inventory.InventoryReservation;
 import com.example.bookingserviceproject.dto.request.ReviewAddRooms;
 import com.example.bookingserviceproject.dto.response.CartResponse;
@@ -12,6 +14,7 @@ import com.example.bookingserviceproject.exception.EventPublishException;
 import com.example.bookingserviceproject.exception.InternalServerException;
 import com.example.bookingserviceproject.exception.NotFoundException;
 import com.example.bookingserviceproject.exception.ServiceUnavailableException;
+import com.example.bookingserviceproject.mapper.CartAddonMapper;
 import com.example.bookingserviceproject.mapper.CartItemMapper;
 import com.example.bookingserviceproject.mapper.CartResMapper;
 import com.example.bookingserviceproject.messaging.InventoryEventPublisher;
@@ -45,6 +48,7 @@ public class CartService {
     private final BookingCart bookingCart;
     private final InventoryClient inventoryClient;
     private final CartItemMapper cartItemMapper;
+    private final CartAddonMapper cartAddonMapper;
     private final CartResMapper cartResMapper;
     private final InventoryEventPublisher inventoryEventPublisher;
 
@@ -54,14 +58,16 @@ public class CartService {
      * @param bookingCart     access to the carts in the booking cache
      * @param inventoryClient client for the inventory-service, which holds the rooms
      * @param cartItemMapper  mapper from rooms held by inventory to cart items
+     * @param cartAddonMapper mapper from extras priced by inventory to cart addons
      * @param cartResMapper   mapper from a cart to its response
      * @param inventoryEventPublisher sends the events the inventory-service listens to
      */
     public CartService(BookingCart bookingCart, InventoryClient inventoryClient, CartItemMapper cartItemMapper,
-                       CartResMapper cartResMapper, InventoryEventPublisher inventoryEventPublisher){
+                       CartAddonMapper cartAddonMapper, CartResMapper cartResMapper, InventoryEventPublisher inventoryEventPublisher){
         this.bookingCart = bookingCart;
         this.inventoryClient = inventoryClient;
         this.cartItemMapper = cartItemMapper;
+        this.cartAddonMapper = cartAddonMapper;
         this.cartResMapper = cartResMapper;
         this.inventoryEventPublisher = inventoryEventPublisher;
     }
@@ -161,6 +167,46 @@ public class CartService {
             // the room is found, the event is sent again (ignored by inventory) and the room is removed
             log.error("Inventory released room {} for user {}, but it could not be removed from the booking cache", itemId, userId, e);
             throw new InternalServerException("The room could not be removed from your cart. Please try again");
+        }
+
+        return getCart(userId);
+    }
+
+    /**
+     * Sets how many of an extra a room in the user's cart has. A new extra is
+     * priced by the inventory-service. For an extra the room already has, the
+     * amount is replaced and the total recalculated from the stored unit price,
+     * without asking inventory.
+     *
+     * @param userId  the id of the user
+     * @param itemId  the id of the room in the cart
+     * @param extraId the id of the extra
+     * @param amount  how many of the extra the room should have
+     * @return the cart after the extra was set
+     * @throws ConflictException if the booking is being completed, or inventory refuses (passed on)
+     * @throws NotFoundException if the room is not in the user's cart, or inventory does not know the extra (passed on)
+     */
+    public CartResponse setExtra(UUID userId, UUID itemId, UUID extraId, int amount){
+        CartContents cart = fromCache(() -> bookingCart.getCart(userId));
+        if (cart.completed()) throw new ConflictException(BOOKING_IN_PROGRESS);
+        // Also covers an expired cart, and stops extras on rooms that are not this user's
+        CartItem item = cart.findItem(itemId).orElseThrow(() -> new NotFoundException("The room is not in your cart"));
+
+        // Known limit: an existing line is not checked with inventory again, so its amount can still be changed
+        // if inventory deactivated the extra meanwhile. Acceptable, since a cart only lives about 25 minutes
+        CartAddon addon = cart.findAddon(itemId, extraId)
+                .map(existing -> cartAddonMapper.withAmount(existing, amount))
+                .orElseGet(() -> {
+                    InventoryExtraPrice price = inventoryClient.priceExtra(userId, extraId, amount);
+                    return cartAddonMapper.toCartAddon(price, item);
+                });
+
+        try {
+            // Replaces the line: the amount is set, not added, so the last request wins
+            bookingCart.putAddon(userId, addon, cart.expiresAt());
+        } catch (DataAccessException e){
+            log.error("Could not store extra {} on room {} for user {} in the booking cache", extraId, itemId, userId, e);
+            throw new InternalServerException("The extra could not be added to your cart. Please try again");
         }
 
         return getCart(userId);

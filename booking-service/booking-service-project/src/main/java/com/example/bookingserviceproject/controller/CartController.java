@@ -1,6 +1,7 @@
 package com.example.bookingserviceproject.controller;
 
 import com.example.bookingserviceproject.dto.request.ReviewAddRooms;
+import com.example.bookingserviceproject.dto.request.ReviewExtraAmount;
 import com.example.bookingserviceproject.dto.response.CartResponse;
 import com.example.bookingserviceproject.dto.response.Envelopes;
 import com.example.bookingserviceproject.service.CartService;
@@ -74,6 +75,27 @@ public class CartController {
             @RequestHeader("X-User-Id") UUID userId
     ){
         CartResponse cart = cartService.removeRoom(userId, itemId);
+        return ClientResponse.ok(new Envelopes.CartResult(cart));
+    }
+
+    /**
+     * Sets how many of an extra a room in the user's cart has. Adds the extra
+     * to the room if it does not have it yet, otherwise replaces the amount.
+     *
+     * @param itemId  the id of the room in the cart
+     * @param extraId the id of the extra
+     * @param request the validated request: how many of the extra the room should have
+     * @param userId  the id of the signed-in user, set by the gateway
+     * @return a response with the whole cart after the extra was set
+     */
+    @PatchMapping("/rooms/{itemId}/extras/{extraId}")
+    public ResponseEntity<Envelopes.CartResult> setExtra(
+            @PathVariable UUID itemId,
+            @PathVariable UUID extraId,
+            @Valid @RequestBody ReviewExtraAmount request,
+            @RequestHeader("X-User-Id") UUID userId
+    ){
+        CartResponse cart = cartService.setExtra(userId, itemId, extraId, request.amount());
         return ClientResponse.ok(new Envelopes.CartResult(cart));
     }
 }

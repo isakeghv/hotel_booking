@@ -1,5 +1,6 @@
 package com.example.bookingserviceproject.client;
 
+import com.example.bookingserviceproject.dto.inventory.InventoryExtraPrice;
 import com.example.bookingserviceproject.dto.inventory.InventoryReservation;
 import com.example.bookingserviceproject.exception.PassThroughException;
 import com.example.bookingserviceproject.exception.ServiceUnavailableException;
@@ -27,6 +28,7 @@ import java.util.UUID;
 public class InventoryClient {
     private static final Logger log = LoggerFactory.getLogger(InventoryClient.class);
     private static final String RESERVE_UNAVAILABLE = "Rooms cannot be reserved right now. Please try again later";
+    private static final String EXTRA_UNAVAILABLE = "Extras cannot be added right now. Please try again later";
     private static final String DEFAULT_REFUSAL = "The request could not be completed";
 
     private final RestClient restClient;
@@ -82,6 +84,41 @@ public class InventoryClient {
             throw new ServiceUnavailableException(RESERVE_UNAVAILABLE);
         }
         return result.reservation();
+    }
+
+    /**
+     * Prices an extra in the inventory-service. Nothing is held there, as extras are not limited.
+     *
+     * @param userId  the id of the user whose cart the extra is priced for
+     * @param extraId the id of the extra
+     * @param amount  how many of the extra
+     * @return the extra, with its unit price and total
+     * @throws PassThroughException        if inventory refuses, e.g. 404 extra not found, 409 cannot be bought separately
+     * @throws ServiceUnavailableException if inventory fails or cannot be reached
+     */
+    public InventoryExtraPrice priceExtra(UUID userId, UUID extraId, int amount){
+        InventoryExtraPrice.Result result;
+        try {
+            result = restClient.get()
+                    .uri(uri -> uri.path("/inventory/availability/extras/{extraId}")
+                            .queryParam("amount", amount)
+                            .build(extraId))
+                    .header("X-User-Id", userId.toString())
+                    .retrieve()
+                    .onStatus(HttpStatusCode::isError, (request, response) -> {
+                        throw toException(response, EXTRA_UNAVAILABLE);
+                    })
+                    .body(InventoryExtraPrice.Result.class);
+        } catch (ResourceAccessException e){
+            log.error("Inventory-service could not be reached to price an extra: {}", e.getMessage());
+            throw new ServiceUnavailableException(EXTRA_UNAVAILABLE);
+        }
+
+        if (result == null || result.extra() == null || result.extra().extra() == null){
+            log.error("Inventory-service returned no price for extra {} and user {}", extraId, userId);
+            throw new ServiceUnavailableException(EXTRA_UNAVAILABLE);
+        }
+        return result.extra();
     }
 
     /**

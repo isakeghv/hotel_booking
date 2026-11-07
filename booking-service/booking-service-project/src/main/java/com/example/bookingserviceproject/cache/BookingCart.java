@@ -6,6 +6,7 @@ import tools.jackson.databind.json.JsonMapper;
 
 import java.time.Instant;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Access to the booking cache (Redis) for users' carts. Each cart is one hash,
@@ -14,7 +15,7 @@ import java.util.*;
  *     <li>{@code bookingId}: the id the booking gets when it is confirmed</li>
  *     <li>{@code expiresAt}: when the cart expires, as epoch milliseconds</li>
  *     <li>{@code item:{itemId}}: one room, as JSON</li>
- *     <li>{@code addon:{itemId}:{extraId}}: one extra on a room, as JSON (added with the extras endpoints)</li>
+ *     <li>{@code addon:{itemId}:{extraId}}: one extra on a room, as JSON</li>
  *     <li>{@code completed}: {@code "true"} while the booking is being completed (payment in progress).
  *     The cart cannot be changed then. Missing or {@code "false"} otherwise</li>
  * </ul>
@@ -110,6 +111,20 @@ public class BookingCart {
     }
 
     /**
+     * Stores an extra on a room in the user's cart, replacing the line if the
+     * room already has that extra.
+     *
+     * @param userId    the id of the user
+     * @param addon     the extra
+     * @param expiresAt when the cart expires, set again so a cart that expired meanwhile does not come back without an expiry
+     */
+    public void putAddon(UUID userId, CartAddon addon, Instant expiresAt){
+        String key = cartKey(userId);
+        redis.opsForHash().put(key, addonField(addon.itemId(), addon.extraId()), jsonMapper.writeValueAsString(addon));
+        redis.expireAt(key, expiresAt);
+    }
+
+    /**
      * Removes one room and its extras from the user's cart. When no rooms are
      * left, the whole cart is deleted, so the next room added starts a new cart.
      *
@@ -153,8 +168,15 @@ public class BookingCart {
                 .filter(entry -> ((String) entry.getKey()).startsWith(ITEM_FIELD_PREFIX))
                 .map(entry -> jsonMapper.readValue((String) entry.getValue(), CartItem.class))
                 .toList();
+        Set<UUID> itemIds = items.stream().map(CartItem::itemId).collect(Collectors.toSet());
+        // An extra belongs to a room: one left behind by a room removed at the same time is not part of the cart
+        List<CartAddon> addons = entries.entrySet().stream()
+                .filter(entry -> ((String) entry.getKey()).startsWith(ADDON_FIELD_PREFIX))
+                .map(entry -> jsonMapper.readValue((String) entry.getValue(), CartAddon.class))
+                .filter(addon -> itemIds.contains(addon.itemId()))
+                .toList();
         boolean completed = "true".equals(entries.get(COMPLETED_FIELD));
-        return new CartContents(UUID.fromString((String) bookingId), expiry, items, completed);
+        return new CartContents(UUID.fromString((String) bookingId), expiry, items, addons, completed);
     }
 
     /**
@@ -163,5 +185,14 @@ public class BookingCart {
      */
     private String cartKey(UUID userId){
         return CART_PREFIX + userId;
+    }
+
+    /**
+     * @param itemId  the id of the room
+     * @param extraId the id of the extra
+     * @return the field of the extra on that room in the cart's hash
+     */
+    private String addonField(UUID itemId, UUID extraId){
+        return ADDON_FIELD_PREFIX + itemId + ":" + extraId;
     }
 }
