@@ -8,9 +8,13 @@ import com.example.bookingserviceproject.dto.inventory.InventoryReservation;
 import com.example.bookingserviceproject.dto.request.ReviewAddRooms;
 import com.example.bookingserviceproject.dto.response.CartResponse;
 import com.example.bookingserviceproject.exception.ConflictException;
+import com.example.bookingserviceproject.exception.EventPublishException;
 import com.example.bookingserviceproject.exception.InternalServerException;
+import com.example.bookingserviceproject.exception.NotFoundException;
+import com.example.bookingserviceproject.exception.ServiceUnavailableException;
 import com.example.bookingserviceproject.mapper.CartItemMapper;
 import com.example.bookingserviceproject.mapper.CartResMapper;
+import com.example.bookingserviceproject.messaging.InventoryEventPublisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
@@ -36,11 +40,13 @@ public class CartService {
     private static final Duration EXPIRY_MARGIN = Duration.ofMinutes(5);
     // With less time left, rooms added now cannot be paid for in time (the same limit as the inventory-service)
     private static final Duration MIN_TIME_LEFT = Duration.ofMinutes(1);
+    private static final String BOOKING_IN_PROGRESS = "Your booking is being completed, so the cart cannot be changed right now";
 
     private final BookingCart bookingCart;
     private final InventoryClient inventoryClient;
     private final CartItemMapper cartItemMapper;
     private final CartResMapper cartResMapper;
+    private final InventoryEventPublisher inventoryEventPublisher;
 
     /**
      * Creates the service with its dependencies.
@@ -49,12 +55,15 @@ public class CartService {
      * @param inventoryClient client for the inventory-service, which holds the rooms
      * @param cartItemMapper  mapper from rooms held by inventory to cart items
      * @param cartResMapper   mapper from a cart to its response
+     * @param inventoryEventPublisher sends the events the inventory-service listens to
      */
-    public CartService(BookingCart bookingCart, InventoryClient inventoryClient, CartItemMapper cartItemMapper, CartResMapper cartResMapper){
+    public CartService(BookingCart bookingCart, InventoryClient inventoryClient, CartItemMapper cartItemMapper,
+                       CartResMapper cartResMapper, InventoryEventPublisher inventoryEventPublisher){
         this.bookingCart = bookingCart;
         this.inventoryClient = inventoryClient;
         this.cartItemMapper = cartItemMapper;
         this.cartResMapper = cartResMapper;
+        this.inventoryEventPublisher = inventoryEventPublisher;
     }
 
     /**
@@ -65,9 +74,11 @@ public class CartService {
      * @param userId  the id of the user
      * @param request the validated request: variant, amount of rooms and dates
      * @return the whole cart after the rooms were added
-     * @throws ConflictException if the cart is about to expire, or inventory refuses (passed on)
+     * @throws ConflictException if the booking is being completed, the cart is about to expire, or inventory refuses (passed on)
      */
     public CartResponse addRooms(UUID userId, ReviewAddRooms request){
+        if (fromCache(() -> bookingCart.isCompleted(userId))) throw new ConflictException(BOOKING_IN_PROGRESS);
+
         // Checked before calling inventory: rooms added to a cart that is about to expire cannot be paid for in time
         Optional<Instant> currentExpiry = fromCache(() -> bookingCart.getExpiry(userId));
         if (currentExpiry.isPresent() && hasTooLittleTimeLeft(currentExpiry.get())){
@@ -113,6 +124,46 @@ public class CartService {
     public CartResponse getCart(UUID userId){
         CartContents cart = fromCache(() -> bookingCart.getCart(userId));
         return cartResMapper.toResponse(cart);
+    }
+
+    /**
+     * Removes one room, and the extras on it, from the user's cart, and tells the
+     * inventory-service to release it. Removing the last room deletes the whole cart.
+     *
+     * @param userId the id of the user
+     * @param itemId the id of the room in the cart
+     * @return the cart after the room was removed, or an empty cart if it was the last room
+     * @throws ConflictException           if the booking is being completed
+     * @throws NotFoundException           if the room is not in the user's cart
+     * @throws ServiceUnavailableException if inventory could not be told, in which case the cart is not changed
+     */
+    public CartResponse removeRoom(UUID userId, UUID itemId){
+        CartContents cart = fromCache(() -> bookingCart.getCart(userId));
+        if (cart.completed()) throw new ConflictException(BOOKING_IN_PROGRESS);
+        // Also covers an expired cart, and stops events for rooms that are not this user's
+        if (!cart.contains(itemId)) throw new NotFoundException("The room is not in your cart");
+
+        // Inventory is told FIRST, and our cart is only changed after Kafka has confirmed the event (waits at most about 5 s).
+        // If the event cannot be sent, the room stays in our cart and the user is asked to try again.
+        // Removing it anyway would leave the room held in inventory but missing from our cart, and the two carts
+        // would drift further apart . Sending the event twice is safe: inventory ignores repeats
+        try {
+            inventoryEventPublisher.reservationItemRemove(userId, itemId);
+        } catch (EventPublishException e){
+            log.error("Could not tell inventory to release room {} for user {}. The cart was not changed", itemId, userId, e);
+            throw new ServiceUnavailableException("The room could not be removed right now. Please try again later");
+        }
+
+        try {
+            bookingCart.removeItem(userId, itemId);
+        } catch (DataAccessException e){
+            // Inventory has already released the room, but it is still in our cart. Trying again fixes it:
+            // the room is found, the event is sent again (ignored by inventory) and the room is removed
+            log.error("Inventory released room {} for user {}, but it could not be removed from the booking cache", itemId, userId, e);
+            throw new InternalServerException("The room could not be removed from your cart. Please try again");
+        }
+
+        return getCart(userId);
     }
 
     /**

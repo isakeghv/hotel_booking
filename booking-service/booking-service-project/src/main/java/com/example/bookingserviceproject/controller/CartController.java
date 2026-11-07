@@ -59,4 +59,21 @@ public class CartController {
         CartResponse cart = cartService.getCart(userId);
         return ClientResponse.ok(new Envelopes.CartResult(cart));
     }
+
+    /**
+     * Removes one room, and the extras on it, from the user's cart. The room
+     * is released in the inventory-service, so others can book it again.
+     *
+     * @param itemId the id of the room in the cart
+     * @param userId the id of the signed-in user, set by the gateway
+     * @return a response with the whole cart after the room was removed
+     */
+    @DeleteMapping("/rooms/{itemId}")
+    public ResponseEntity<Envelopes.CartResult> removeRoom(
+            @PathVariable UUID itemId,
+            @RequestHeader("X-User-Id") UUID userId
+    ){
+        CartResponse cart = cartService.removeRoom(userId, itemId);
+        return ClientResponse.ok(new Envelopes.CartResult(cart));
+    }
 }

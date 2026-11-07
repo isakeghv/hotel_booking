@@ -14,6 +14,9 @@ import java.util.*;
  *     <li>{@code bookingId}: the id the booking gets when it is confirmed</li>
  *     <li>{@code expiresAt}: when the cart expires, as epoch milliseconds</li>
  *     <li>{@code item:{itemId}}: one room, as JSON</li>
+ *     <li>{@code addon:{itemId}:{extraId}}: one extra on a room, as JSON (added with the extras endpoints)</li>
+ *     <li>{@code completed}: {@code "true"} while the booking is being completed (payment in progress).
+ *     The cart cannot be changed then. Missing or {@code "false"} otherwise</li>
  * </ul>
  * The whole cart expires at one fixed time, set when its first room is added.
  * Adding more rooms does not extend it.
@@ -24,6 +27,8 @@ public class BookingCart {
     private static final String BOOKING_ID_FIELD = "bookingId";
     private static final String EXPIRES_AT_FIELD = "expiresAt";
     private static final String ITEM_FIELD_PREFIX = "item:";
+    private static final String ADDON_FIELD_PREFIX = "addon:";
+    private static final String COMPLETED_FIELD = "completed";
 
     private final StringRedisTemplate redis;
     private final JsonMapper jsonMapper;
@@ -48,6 +53,14 @@ public class BookingCart {
     public Optional<Instant> getExpiry(UUID userId){
         Object stored = redis.opsForHash().get(cartKey(userId), EXPIRES_AT_FIELD);
         return Optional.ofNullable(stored).map(value -> Instant.ofEpochMilli(Long.parseLong((String) value)));
+    }
+
+    /**
+     * @param userId the id of the user
+     * @return true if the user's booking is being completed, so the cart cannot be changed
+     */
+    public boolean isCompleted(UUID userId){
+        return "true".equals(redis.opsForHash().get(cartKey(userId), COMPLETED_FIELD));
     }
 
     /**
@@ -97,6 +110,31 @@ public class BookingCart {
     }
 
     /**
+     * Removes one room and its extras from the user's cart. When no rooms are
+     * left, the whole cart is deleted, so the next room added starts a new cart.
+     *
+     * @param userId the id of the user
+     * @param itemId the id of the room in the cart
+     */
+    public void removeItem(UUID userId, UUID itemId){
+        String key = cartKey(userId);
+        String addonPrefix = ADDON_FIELD_PREFIX + itemId + ":";
+
+        // Redis cannot delete hash fields by pattern, so the room's extras are found by name first
+        List<Object> fields = new ArrayList<>();
+        fields.add(ITEM_FIELD_PREFIX + itemId);
+        redis.opsForHash().keys(key).stream()
+                .filter(field -> ((String) field).startsWith(addonPrefix))
+                .forEach(fields::add);
+        redis.opsForHash().delete(key, fields.toArray());
+
+        // Read again after deleting, so a room added by another request in the meantime keeps its cart
+        boolean hasRooms = redis.opsForHash().keys(key).stream()
+                .anyMatch(field -> ((String) field).startsWith(ITEM_FIELD_PREFIX));
+        if (!hasRooms) redis.delete(key);
+    }
+
+    /**
      * Retrieves everything in the user's cart in one request to Redis.
      *
      * @param userId the id of the user
@@ -115,7 +153,8 @@ public class BookingCart {
                 .filter(entry -> ((String) entry.getKey()).startsWith(ITEM_FIELD_PREFIX))
                 .map(entry -> jsonMapper.readValue((String) entry.getValue(), CartItem.class))
                 .toList();
-        return new CartContents(UUID.fromString((String) bookingId), expiry, items);
+        boolean completed = "true".equals(entries.get(COMPLETED_FIELD));
+        return new CartContents(UUID.fromString((String) bookingId), expiry, items, completed);
     }
 
     /**
