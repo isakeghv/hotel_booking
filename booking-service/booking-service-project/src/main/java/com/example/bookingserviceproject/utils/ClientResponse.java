@@ -30,6 +30,18 @@ public class ClientResponse {
     }
 
     /**
+     * Builds a 201 response with the given body, one of the records in
+     * {@link com.example.bookingserviceproject.dto.response.Envelopes}.
+     *
+     * @param body the response body
+     * @param <T> the type of the body
+     * @return a 201 response with the body
+     */
+    public static <T> ResponseEntity<T> created(T body){
+        return ResponseEntity.status(HttpStatus.CREATED).body(body);
+    }
+
+    /**
      * Builds a 204 response without a body.
      *
      * @return a 204 response

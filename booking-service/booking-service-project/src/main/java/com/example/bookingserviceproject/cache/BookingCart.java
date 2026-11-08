@@ -4,6 +4,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.json.JsonMapper;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -17,7 +18,8 @@ import java.util.stream.Collectors;
  *     <li>{@code item:{itemId}}: one room, as JSON</li>
  *     <li>{@code addon:{itemId}:{extraId}}: one extra on a room, as JSON</li>
  *     <li>{@code completed}: {@code "true"} while the booking is being completed (payment in progress).
- *     The cart cannot be changed then. Missing or {@code "false"} otherwise</li>
+ *     The cart cannot be changed then. Missing otherwise</li>
+ *     <li>{@code expiryExtended}: {@code "true"} once confirm has extended the cart's expiry, which only happens once</li>
  * </ul>
  * The whole cart expires at one fixed time, set when its first room is added.
  * Adding more rooms does not extend it.
@@ -30,6 +32,7 @@ public class BookingCart {
     private static final String ITEM_FIELD_PREFIX = "item:";
     private static final String ADDON_FIELD_PREFIX = "addon:";
     private static final String COMPLETED_FIELD = "completed";
+    private static final String EXPIRY_EXTENDED_FIELD = "expiryExtended";
 
     private final StringRedisTemplate redis;
     private final JsonMapper jsonMapper;
@@ -62,6 +65,50 @@ public class BookingCart {
      */
     public boolean isCompleted(UUID userId){
         return "true".equals(redis.opsForHash().get(cartKey(userId), COMPLETED_FIELD));
+    }
+
+    /**
+     * Locks the cart while the booking is being completed: the cart cannot be
+     * changed, and no other confirm can start. Only one request gets the lock,
+     * also when several arrive at the same time.
+     * <p>
+     * If the cart expired just before, this creates a new key with only this
+     * field and no expiry: the caller must read the cart again and delete it if it is gone.
+     *
+     * @param userId the id of the user
+     * @return true if this request locked the cart, false if it was already locked
+     */
+    public boolean lockForCompletion(UUID userId){
+        return Boolean.TRUE.equals(redis.opsForHash().putIfAbsent(cartKey(userId), COMPLETED_FIELD, "true"));
+    }
+
+    /**
+     * Opens the cart again after a failed payment, so the user can change it and try again.
+     *
+     * @param userId the id of the user
+     */
+    public void unlock(UUID userId){
+        redis.opsForHash().delete(cartKey(userId), COMPLETED_FIELD);
+    }
+
+    /**
+     * Extends the cart's expiry, but only the first time it is called for the
+     * cart: later calls change nothing. Gives the first confirm attempt time for
+     * slow connections and the payment.
+     *
+     * @param userId the id of the user
+     * @param by     how much later the cart expires
+     */
+    public void extendExpiryOnce(UUID userId, Duration by){
+        String key = cartKey(userId);
+        Boolean first = redis.opsForHash().putIfAbsent(key, EXPIRY_EXTENDED_FIELD, "true");
+        if (!Boolean.TRUE.equals(first)) return;
+
+        Object stored = redis.opsForHash().get(key, EXPIRES_AT_FIELD);
+        if (stored == null) return;
+        Instant extended = Instant.ofEpochMilli(Long.parseLong((String) stored)).plus(by);
+        redis.opsForHash().put(key, EXPIRES_AT_FIELD, String.valueOf(extended.toEpochMilli()));
+        redis.expireAt(key, extended);
     }
 
     /**

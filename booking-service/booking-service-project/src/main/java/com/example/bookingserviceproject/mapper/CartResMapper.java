@@ -43,9 +43,7 @@ public class CartResMapper {
                 .map(item -> toItem(item, addonsByItem.getOrDefault(item.itemId(), List.of())))
                 .toList();
 
-        int total = cart.items().stream().mapToInt(CartItem::total).sum()
-                + cart.addons().stream().mapToInt(CartAddon::total).sum();
-        return new CartResponse(cart.expiresAt(), PriceUtils.CURRENCY, items, total);
+        return new CartResponse(cart.expiresAt(), PriceUtils.CURRENCY, items, cart.total());
     }
 
     /**

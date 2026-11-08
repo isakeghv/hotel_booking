@@ -10,7 +10,7 @@ CREATE TABLE booking_addons(
     price INT NOT NULL,
     CHECK (amount > 0),
     CHECK (price >= 0),
-    -- One line per extra per room: adding the same extra again increases the amount
+    -- One line per extra per room: setting the same extra again changes its amount
     UNIQUE (item_id, extra_id)
 );
 

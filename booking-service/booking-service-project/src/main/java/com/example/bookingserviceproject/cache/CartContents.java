@@ -31,6 +31,13 @@ public record CartContents(UUID bookingId, Instant expiresAt, List<CartItem> ite
     }
 
     /**
+     * @return the price of everything in the cart: the rooms and their extras
+     */
+    public int total(){
+        return items.stream().mapToInt(CartItem::total).sum() + addons.stream().mapToInt(CartAddon::total).sum();
+    }
+
+    /**
      * @param itemId the id of a room in the cart
      * @return true if the room is in the cart
      */

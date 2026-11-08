@@ -2,6 +2,8 @@ package com.example.bookingserviceproject.exception;
 
 import com.example.bookingserviceproject.dto.FieldError;
 import com.example.bookingserviceproject.utils.ClientResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -9,6 +11,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.ErrorResponse;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import tools.jackson.databind.exc.InvalidFormatException;
@@ -24,6 +27,7 @@ import java.util.Map;
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     /**
      * Handles request bodies that fail Bean Validation.
@@ -177,5 +181,23 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<Map<String, String>> handleTypeMismatch(MethodArgumentTypeMismatchException ex){
         return ClientResponse.badRequest("'" + ex.getName() + "' has an invalid value");
+    }
+
+    /**
+     * Handles everything no other handler covers, without leaking details such
+     * as the stack trace. Spring's own errors (e.g. 405 method not allowed,
+     * 415 unsupported media type) keep their status.
+     *
+     * @param ex the exception
+     * @return a response with Spring's status for its own errors, otherwise a 500 response
+     */
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Map<String, String>> handleUnexpected(Exception ex){
+        if (ex instanceof ErrorResponse errorResponse){
+            String detail = errorResponse.getBody().getDetail();
+            return ClientResponse.status(errorResponse.getStatusCode(), detail != null ? detail : "The request could not be completed");
+        }
+        log.error("Unexpected error", ex);
+        return ClientResponse.internalServerErr("Something went wrong. Please try again");
     }
 }

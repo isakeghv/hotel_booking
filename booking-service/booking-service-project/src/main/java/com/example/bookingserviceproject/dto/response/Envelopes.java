@@ -13,4 +13,9 @@ public final class Envelopes {
 
     /** Body when the cart is returned. */
     public record CartResult(CartResponse cart) {}
+
+    // ----- Bookings -----
+
+    /** Body when one booking is returned. */
+    public record BookingResult(BookingResponse booking) {}
 }
