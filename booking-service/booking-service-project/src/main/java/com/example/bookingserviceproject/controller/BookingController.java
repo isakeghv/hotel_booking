@@ -3,9 +3,12 @@ package com.example.bookingserviceproject.controller;
 import com.example.bookingserviceproject.dto.request.ReviewConfirmBooking;
 import com.example.bookingserviceproject.dto.response.BookingResponse;
 import com.example.bookingserviceproject.dto.response.Envelopes;
+import com.example.bookingserviceproject.dto.response.MyBookingsResponse;
+import com.example.bookingserviceproject.service.BookingService;
 import com.example.bookingserviceproject.service.CheckoutService;
 import com.example.bookingserviceproject.utils.ClientResponse;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,14 +22,17 @@ import java.util.UUID;
 @RequestMapping("/booking")
 public class BookingController {
     private final CheckoutService checkoutService;
+    private final BookingService bookingService;
 
     /**
-     * Creates the controller with the service it delegates to.
+     * Creates the controller with the services it delegates to.
      *
      * @param checkoutService service that confirms bookings
+     * @param bookingService  service that lists and looks up bookings
      */
-    public BookingController(CheckoutService checkoutService){
+    public BookingController(CheckoutService checkoutService, BookingService bookingService){
         this.checkoutService = checkoutService;
+        this.bookingService = bookingService;
     }
 
     /**
@@ -44,5 +50,22 @@ public class BookingController {
     ){
         BookingResponse booking = checkoutService.confirm(userId, request.card());
         return ClientResponse.created(new Envelopes.BookingResult(booking));
+    }
+
+    /**
+     * Returns an overview of the user's bookings, in three lists of at most 10:
+     * upcoming, previous and cancelled. "See more" asks for the next page.
+     *
+     * @param page   the page, 1 or higher (default 1): 1 gives bookings 1-10 of each list, 2 gives 11-20
+     * @param userId the id of the signed-in user, set by the gateway
+     * @return a response with the three lists
+     */
+    @GetMapping("/bookings/me")
+    public ResponseEntity<Envelopes.MyBookingsResult> getMyBookings(
+            @RequestParam(defaultValue = "1") @Min(value = 1, message = "Page must be 1 or higher") int page,
+            @RequestHeader("X-User-Id") UUID userId
+    ){
+        MyBookingsResponse bookings = bookingService.getMyBookings(userId, page);
+        return ClientResponse.ok(new Envelopes.MyBookingsResult(bookings));
     }
 }

@@ -15,8 +15,8 @@ CREATE TABLE bookings(
     CHECK (total_price >= 0)
 );
 
--- The customer's lists: upcoming, previous and cancelled
-CREATE INDEX idx_bookings_user_cancelled_end ON bookings(user_id, cancelled, end_time);
+-- The customer's lists: upcoming, previous and cancelled, all filtered and sorted by start date
+CREATE INDEX idx_bookings_user_cancelled_start ON bookings(user_id, cancelled, start_time);
 
 -- The staff date search: bookings that start, end or cover a date
 CREATE INDEX idx_bookings_start_end ON bookings(start_time, end_time);

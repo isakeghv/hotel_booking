@@ -157,3 +157,6 @@ gateway:
     - path: /inventory/variants/{variantId}/extras/{extrasId}
       methods: [POST]
       allowed-levels: [2, 3]
+    - path: /booking/bookings/me
+      methods: [GET]
+      allowed-levels: [0]

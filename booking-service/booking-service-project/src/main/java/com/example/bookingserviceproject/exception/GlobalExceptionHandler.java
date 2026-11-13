@@ -12,6 +12,7 @@ import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.ErrorResponse;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import tools.jackson.databind.exc.InvalidFormatException;
@@ -43,6 +44,24 @@ public class GlobalExceptionHandler {
                 .forEach(err -> errs.add(new FieldError(
                         err.getField(), err.getDefaultMessage()
                 )));
+
+        return ResponseEntity.badRequest().body(Map.of("err", errs));
+    }
+
+    /**
+     * Handles path variables, query parameters and headers that fail Bean
+     * Validation, e.g. {@code @Min(1)} on a page number.
+     *
+     * @param ex the validation exception
+     * @return a 400 response with the list of errors under the key {@code err}, the same shape as an invalid body
+     */
+    @ExceptionHandler(HandlerMethodValidationException.class)
+    public ResponseEntity<Map<String, List<FieldError>>> handleParameterValidation(HandlerMethodValidationException ex){
+        List<FieldError> errs = new ArrayList<>();
+        ex.getParameterValidationResults().forEach(result -> result.getResolvableErrors()
+                .forEach(err -> errs.add(new FieldError(
+                        result.getMethodParameter().getParameterName(), err.getDefaultMessage()
+                ))));
 
         return ResponseEntity.badRequest().body(Map.of("err", errs));
     }

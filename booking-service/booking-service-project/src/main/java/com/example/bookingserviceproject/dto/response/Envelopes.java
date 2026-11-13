@@ -18,4 +18,7 @@ public final class Envelopes {
 
     /** Body when one booking is returned. */
     public record BookingResult(BookingResponse booking) {}
+
+    /** Body of the user's booking overviews. */
+    public record MyBookingsResult(MyBookingsResponse bookings) {}
 }

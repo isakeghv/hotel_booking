@@ -1,6 +1,7 @@
 package com.example.bookingserviceproject.client;
 
 import com.example.bookingserviceproject.dto.inventory.InventoryExtraPrice;
+import com.example.bookingserviceproject.dto.inventory.InventoryPrimaryImage;
 import com.example.bookingserviceproject.dto.inventory.InventoryReservation;
 import com.example.bookingserviceproject.exception.PassThroughException;
 import com.example.bookingserviceproject.exception.ServiceUnavailableException;
@@ -17,6 +18,9 @@ import tools.jackson.databind.json.JsonMapper;
 
 import java.io.IOException;
 import java.time.LocalDate;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -29,6 +33,7 @@ public class InventoryClient {
     private static final Logger log = LoggerFactory.getLogger(InventoryClient.class);
     private static final String RESERVE_UNAVAILABLE = "Rooms cannot be reserved right now. Please try again later";
     private static final String EXTRA_UNAVAILABLE = "Extras cannot be added right now. Please try again later";
+    private static final String IMAGES_UNAVAILABLE = "Images cannot be fetched right now";
     private static final String DEFAULT_REFUSAL = "The request could not be completed";
 
     private final RestClient restClient;
@@ -119,6 +124,38 @@ public class InventoryClient {
             throw new ServiceUnavailableException(EXTRA_UNAVAILABLE);
         }
         return result.extra();
+    }
+
+    /**
+     * Fetches the primary image of several room types in one request. A room
+     * type without a primary image is returned with its file path and alt text null.
+     *
+     * @param roomTypeIds the room types, 1-30 (inventory's limit)
+     * @return one entry per distinct room type
+     * @throws PassThroughException        if inventory refuses, e.g. 400 more than 30 ids
+     * @throws ServiceUnavailableException if inventory fails or cannot be reached
+     */
+    public List<InventoryPrimaryImage> getPrimaryImages(Collection<UUID> roomTypeIds){
+        InventoryPrimaryImage.Result result;
+        try {
+            result = restClient.post()
+                    .uri("/inventory/roomtypes/images/primary")
+                    .body(Map.of("roomTypeIds", roomTypeIds))
+                    .retrieve()
+                    .onStatus(HttpStatusCode::isError, (request, response) -> {
+                        throw toException(response, IMAGES_UNAVAILABLE);
+                    })
+                    .body(InventoryPrimaryImage.Result.class);
+        } catch (ResourceAccessException e){
+            log.error("Inventory-service could not be reached to fetch primary images: {}", e.getMessage());
+            throw new ServiceUnavailableException(IMAGES_UNAVAILABLE);
+        }
+
+        if (result == null || result.primaryImages() == null){
+            log.error("Inventory-service returned no primary images for {} room types", roomTypeIds.size());
+            throw new ServiceUnavailableException(IMAGES_UNAVAILABLE);
+        }
+        return result.primaryImages();
     }
 
     /**
