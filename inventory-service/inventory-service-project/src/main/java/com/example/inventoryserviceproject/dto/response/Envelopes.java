@@ -71,6 +71,17 @@ public final class Envelopes {
     /** Body with a message, e.g. after uploading an image. */
     public record MessageResult(String message) {}
 
+    /** Body with the primary image of one room type. */
+    public record PrimaryImageResult(
+            @Schema(description = "The room type's primary image")
+            PrimaryImageResponse primaryImageResponse) {}
+
+    /** Body with the primary image of several room types. */
+    public record PrimaryImagesResult(
+            @Schema(description = "One entry per requested room type, in the order given. " +
+                    "`filePath` and `altText` are null if the room type has no primary image or does not exist")
+            List<PrimaryImageResponse> primaryImages) {}
+
     // ----- Errors -----
 
     /** Body of an error. The message can be shown to users. */

@@ -1,7 +1,9 @@
 package com.example.inventoryserviceproject.controller;
 
 import com.example.inventoryserviceproject.dto.request.ReviewImageData;
+import com.example.inventoryserviceproject.dto.request.ReviewPrimaryImagesQuery;
 import com.example.inventoryserviceproject.dto.response.Envelopes;
+import com.example.inventoryserviceproject.dto.response.PrimaryImageResponse;
 import com.example.inventoryserviceproject.service.ImageService;
 import com.example.inventoryserviceproject.utils.ClientResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -14,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -102,5 +105,58 @@ public class ImagesController {
     public ResponseEntity<Void> setPrimaryImage(@PathVariable UUID roomTypeId, @PathVariable UUID imageId){
         imageService.setPrimaryImage(roomTypeId, imageId);
         return ClientResponse.okEmpty();
+    }
+
+    /**
+     * Returns the primary image of a room type.
+     *
+     * @param roomTypeId the id of the room type
+     * @return a response with the image-path and alt-text
+     */
+    @Operation(
+            summary = "Get the primary image of a room type",
+            description = """
+                    **Access: Internal.**
+
+                    The primary image is the one shown when the room type is listed. \
+                    For several room types at once, use `POST /inventory/roomtypes/images/primary`.
+
+                    **Response key:** `primaryImageResponse`.
+                    """)
+    @ApiResponse(responseCode = "200", description = "The primary image")
+    @ApiResponse(responseCode = "404", content = @Content(schema = @Schema(implementation = Envelopes.ErrorResult.class)), description = "The room type has no images, or does not exist")
+    @GetMapping("/roomtypes/{roomTypeId}/image/primary")
+    public ResponseEntity<Envelopes.PrimaryImageResult> getPrimaryImage(@PathVariable UUID roomTypeId){
+        PrimaryImageResponse imageResponse = imageService.getPrimaryImage(roomTypeId);
+
+        return ClientResponse.ok(new Envelopes.PrimaryImageResult(imageResponse));
+    }
+
+    /**
+     * Returns the primary image of each given room type. Room types without a
+     * primary image are included, with the image-path and alt-text null.
+     *
+     * @param request the validated room type ids, at most 30
+     * @return a response with one entry per distinct room type id
+     */
+    @Operation(
+            summary = "Get the primary image of several room types",
+            description = """
+                    **Access: Internal.**
+
+                    Takes up to 30 room type ids in the body. Returns one entry per distinct id, in the order given.
+
+                    A room type without a primary image, or one that does not exist, is **not an error**: \
+                    it is returned with `filePath` and `altText` set to `null`.
+
+                    **Response key:** `primaryImages`.
+                    """)
+    @ApiResponse(responseCode = "200", description = "The primary images")
+    @ApiResponse(responseCode = "400", content = @Content(schema = @Schema(implementation = Envelopes.ValidationErrorResult.class)), description = "Invalid input: no ids, more than 30, or an id that is null or not a valid UUID")
+    @PostMapping("/roomtypes/images/primary")
+    public ResponseEntity<Envelopes.PrimaryImagesResult> getPrimaryImages(@Valid @RequestBody ReviewPrimaryImagesQuery request){
+        List<PrimaryImageResponse> images = imageService.getPrimaryImages(request.roomTypeIds());
+
+        return ClientResponse.ok(new Envelopes.PrimaryImagesResult(images));
     }
 }

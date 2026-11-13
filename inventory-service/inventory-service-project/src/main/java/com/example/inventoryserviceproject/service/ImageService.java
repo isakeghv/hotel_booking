@@ -1,10 +1,12 @@
 package com.example.inventoryserviceproject.service;
 
 import com.example.inventoryserviceproject.dto.request.ReviewImageData;
+import com.example.inventoryserviceproject.dto.response.PrimaryImageResponse;
 import com.example.inventoryserviceproject.exception.ConflictException;
 import com.example.inventoryserviceproject.exception.InternalServerException;
 import com.example.inventoryserviceproject.exception.NotFoundException;
 import com.example.inventoryserviceproject.exception.UnsupportedMediaException;
+import com.example.inventoryserviceproject.mapper.PrimaryImageResponseMapper;
 import com.example.inventoryserviceproject.model.ImageData;
 import com.example.inventoryserviceproject.model.RoomType;
 import com.example.inventoryserviceproject.repository.ImageRepository;
@@ -25,9 +27,14 @@ import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * Service for uploading room type images. The image file is sent to the
@@ -46,6 +53,7 @@ public class ImageService {
     ImageRepository imageRepository;
     RestTemplate restTemplate;
     TransactionTemplate transactionTemplate;
+    PrimaryImageResponseMapper primaryImageResponseMapper;
     @Value("${image.service.url}") String imageServiceUrl;
 
     /**
@@ -60,12 +68,14 @@ public class ImageService {
             RoomTypesRepository roomTypesRepository,
             ImageRepository imageRepository,
             RestTemplate restTemplate,
-            TransactionTemplate transactionTemplate
+            TransactionTemplate transactionTemplate,
+            PrimaryImageResponseMapper primaryImageResponseMapper
     ){
         this.roomTypesRepository = roomTypesRepository;
         this.imageRepository = imageRepository;
         this.restTemplate = restTemplate;
         this.transactionTemplate = transactionTemplate;
+        this.primaryImageResponseMapper = primaryImageResponseMapper;
     }
 
     /**
@@ -205,5 +215,42 @@ public class ImageService {
      */
     public List<ImageData> getImageData(UUID roomTypeId){
         return imageRepository.findAllByRoomTypeIdOrderByIsPrimaryDesc(roomTypeId);
+    }
+
+    public PrimaryImageResponse getPrimaryImage(UUID roomTypeId){
+        Optional<ImageData> optImageData = imageRepository.findByRoomTypeIdAndIsPrimaryTrue(roomTypeId);
+        if (optImageData.isEmpty()){
+            throw new NotFoundException("Image not found");
+        }
+
+        PrimaryImageResponse imageResponse = primaryImageResponseMapper.toResponse(optImageData.get(), roomTypeId);
+
+        return imageResponse;
+    }
+
+    /**
+     * Retrieves the primary image of each given room type, in one database
+     * query. A room type without a primary image (no images, or the room type
+     * does not exist) is still returned, with the path and alt-text null.
+     *
+     * @param roomTypeIds the ids of the room types; duplicates are returned once
+     * @return one response per distinct room type id, in the order given
+     */
+    public List<PrimaryImageResponse> getPrimaryImages(List<UUID> roomTypeIds){
+        // Keeps the request order, without duplicates
+        Set<UUID> distinctIds = new LinkedHashSet<>(roomTypeIds);
+
+        Map<UUID, ImageData> primaryImageByType = imageRepository.findAllByRoomTypeIdInAndIsPrimaryTrue(distinctIds)
+                .stream()
+                .collect(Collectors.toMap(ImageData::getRoomTypeId, Function.identity()));
+
+        return distinctIds.stream()
+                .map(id -> {
+                    ImageData image = primaryImageByType.get(id);
+                    return image == null
+                            ? primaryImageResponseMapper.toEmptyResponse(id)
+                            : primaryImageResponseMapper.toResponse(image, id);
+                })
+                .toList();
     }
 }
