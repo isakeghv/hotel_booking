@@ -101,6 +101,6 @@ public class BookingResMapper {
      * @return the response object
      */
     private BookingResponse.Extra toExtra(BookingAddon addon, boolean cancelled){
-        return new BookingResponse.Extra(addon.getName(), addon.getAmount(), addon.getPrice(), cancelled);
+        return new BookingResponse.Extra(addon.getExtraId(), addon.getName(), addon.getAmount(), addon.getPrice(), cancelled);
     }
 }

@@ -55,10 +55,12 @@ public record BookingResponse(
     /**
      * One extra on a booked room.
      *
+     * @param extraId   the id of the extra in the inventory-service. A room has each extra at most once,
+     *                  so the room's itemId and this id identify the extra, e.g. to cancel it
      * @param name      the name of the extra
      * @param amount    how many of the extra
      * @param price     the price of this extra for the room, all of them together
      * @param cancelled true if this extra is cancelled
      */
-    public record Extra(String name, int amount, int price, boolean cancelled) {}
+    public record Extra(UUID extraId, String name, int amount, int price, boolean cancelled) {}
 }
