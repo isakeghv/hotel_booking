@@ -8,9 +8,13 @@ import com.example.bookingserviceproject.exception.ServiceUnavailableException;
 import com.example.bookingserviceproject.messaging.InventoryEventPublisher;
 import com.example.bookingserviceproject.messaging.PaymentEventPublisher;
 import com.example.bookingserviceproject.model.Booking;
+import com.example.bookingserviceproject.model.BookingDetails;
 import com.example.bookingserviceproject.model.BookingItem;
+import com.example.bookingserviceproject.repository.BookingAddonRepository;
 import com.example.bookingserviceproject.repository.BookingItemRepository;
 import com.example.bookingserviceproject.repository.BookingRepository;
+import com.example.bookingserviceproject.repository.CancelledAddonRepository;
+import com.example.bookingserviceproject.repository.CancelledItemRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.PessimisticLockingFailureException;
@@ -36,6 +40,9 @@ public class CancellationService {
 
     private final BookingRepository bookingRepository;
     private final BookingItemRepository bookingItemRepository;
+    private final BookingAddonRepository bookingAddonRepository;
+    private final CancelledItemRepository cancelledItemRepository;
+    private final CancelledAddonRepository cancelledAddonRepository;
     private final PaymentEventPublisher paymentEventPublisher;
     private final InventoryEventPublisher inventoryEventPublisher;
     private final TransactionTemplate transactionTemplate;
@@ -45,15 +52,22 @@ public class CancellationService {
      *
      * @param bookingRepository       the bookings
      * @param bookingItemRepository   the booked rooms
+     * @param bookingAddonRepository   the extras on booked rooms
+     * @param cancelledItemRepository  the cancelled rooms
+     * @param cancelledAddonRepository the cancelled extras
      * @param paymentEventPublisher   sends the events the payment-service listens to
      * @param inventoryEventPublisher sends the events the inventory-service listens to
      * @param transactionManager      runs the cancellation in one transaction, ended inside this class
      */
     public CancellationService(BookingRepository bookingRepository, BookingItemRepository bookingItemRepository,
-                               PaymentEventPublisher paymentEventPublisher, InventoryEventPublisher inventoryEventPublisher,
-                               PlatformTransactionManager transactionManager){
+                               BookingAddonRepository bookingAddonRepository, CancelledItemRepository cancelledItemRepository,
+                               CancelledAddonRepository cancelledAddonRepository, PaymentEventPublisher paymentEventPublisher,
+                               InventoryEventPublisher inventoryEventPublisher, PlatformTransactionManager transactionManager){
         this.bookingRepository = bookingRepository;
         this.bookingItemRepository = bookingItemRepository;
+        this.bookingAddonRepository = bookingAddonRepository;
+        this.cancelledItemRepository = cancelledItemRepository;
+        this.cancelledAddonRepository = cancelledAddonRepository;
         this.paymentEventPublisher = paymentEventPublisher;
         this.inventoryEventPublisher = inventoryEventPublisher;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
@@ -106,9 +120,15 @@ public class CancellationService {
         if (booking.getStartTime().isBefore(LocalDateTime.now())){
             throw new ConflictException("This booking has already started, and can no longer be cancelled");
         }
-        List<UUID> itemIds = bookingItemRepository.findAllByBooking_BookingId(bookingId).stream()
-                .map(BookingItem::getItemId)
-                .toList();
+        // Rooms or extras cancelled earlier are not refunded again: only what is still active
+        BookingDetails details = new BookingDetails(
+                booking,
+                bookingItemRepository.findAllByBooking_BookingId(bookingId),
+                bookingAddonRepository.findAllByBooking_BookingId(bookingId),
+                cancelledItemRepository.findAllByBooking_BookingId(bookingId),
+                cancelledAddonRepository.findAllByBooking_BookingId(bookingId));
+        int amount = details.activeAmount();
+        List<UUID> itemIds = details.items().stream().map(BookingItem::getItemId).toList();
 
         // 3. Cancel, and write it to the database now, so a database problem shows before the payment-service is told
         booking.cancel();
@@ -116,7 +136,7 @@ public class CancellationService {
 
         // 4. Tell the payment-service, waiting for Kafka. If this throws, the cancellation is rolled back
         paymentEventPublisher.bookingCancelled(new BookingCancelledPaymentEvent(
-                bookingId, userId, booking.getStartTime(), Instant.now(), false));
+                bookingId, userId, amount, booking.getStartTime(), Instant.now(), false));
 
         return itemIds;
     }

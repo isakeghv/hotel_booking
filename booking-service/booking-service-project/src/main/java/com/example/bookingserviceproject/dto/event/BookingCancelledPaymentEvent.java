@@ -11,6 +11,8 @@ import java.util.UUID;
  *
  * @param bookingId            the cancelled booking, the payment's key
  * @param userId               the user who booked
+ * @param amount               what to refund at most: the rooms and extras that were still active
+ *                             (rooms or extras cancelled earlier are not counted again)
  * @param startTime            when the booking starts (local hotel time), for the 48 h rule
  * @param cancelledAt          when the booking-service sent this (UTC). The rule is applied at this time,
  *                             so a slow delivery never costs the user a refund
@@ -20,6 +22,7 @@ import java.util.UUID;
 public record BookingCancelledPaymentEvent(
         UUID bookingId,
         UUID userId,
+        int amount,
         LocalDateTime startTime,
         Instant cancelledAt,
         boolean ignoreRefundDeadline
