@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -29,4 +30,13 @@ public interface BookingItemRepository extends JpaRepository<BookingItem, UUID> 
      */
     @EntityGraph(attributePaths = "booking")
     List<BookingItem> findAllByBooking_BookingIdIn(Collection<UUID> bookingIds);
+
+    /**
+     * Finds a room only if it belongs to the booking.
+     *
+     * @param itemId    the id of the room
+     * @param bookingId the id of the booking
+     * @return the room, or empty if the booking has no room with this id
+     */
+    Optional<BookingItem> findByItemIdAndBooking_BookingId(UUID itemId, UUID bookingId);
 }

@@ -32,4 +32,10 @@ public interface CancelledItemRepository extends JpaRepository<CancelledItem, UU
      */
     @EntityGraph(attributePaths = "item")
     List<CancelledItem> findAllByBooking_BookingIdIn(Collection<UUID> bookingIds);
+
+    /**
+     * @param itemId the id of a room
+     * @return true if the room is cancelled on its own
+     */
+    boolean existsByItem_ItemId(UUID itemId);
 }

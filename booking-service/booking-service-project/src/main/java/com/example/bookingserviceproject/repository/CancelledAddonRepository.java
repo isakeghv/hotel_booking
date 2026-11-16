@@ -21,4 +21,10 @@ public interface CancelledAddonRepository extends JpaRepository<CancelledAddon, 
      */
     @EntityGraph(attributePaths = "addon")
     List<CancelledAddon> findAllByBooking_BookingId(UUID bookingId);
+
+    /**
+     * @param addonId the id of an extra on a room
+     * @return true if the extra is cancelled on its own
+     */
+    boolean existsByAddon_AddonId(UUID addonId);
 }

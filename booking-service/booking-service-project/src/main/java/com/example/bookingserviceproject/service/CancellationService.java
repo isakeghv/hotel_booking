@@ -1,5 +1,6 @@
 package com.example.bookingserviceproject.service;
 
+import com.example.bookingserviceproject.dto.event.AddonCancelledPaymentEvent;
 import com.example.bookingserviceproject.dto.event.BookingCancelledPaymentEvent;
 import com.example.bookingserviceproject.dto.event.ItemCancelledPaymentEvent;
 import com.example.bookingserviceproject.exception.ConflictException;
@@ -9,8 +10,10 @@ import com.example.bookingserviceproject.exception.ServiceUnavailableException;
 import com.example.bookingserviceproject.messaging.InventoryEventPublisher;
 import com.example.bookingserviceproject.messaging.PaymentEventPublisher;
 import com.example.bookingserviceproject.model.Booking;
+import com.example.bookingserviceproject.model.BookingAddon;
 import com.example.bookingserviceproject.model.BookingDetails;
 import com.example.bookingserviceproject.model.BookingItem;
+import com.example.bookingserviceproject.model.CancelledAddon;
 import com.example.bookingserviceproject.model.CancelledBy;
 import com.example.bookingserviceproject.model.CancelledItem;
 import com.example.bookingserviceproject.repository.BookingAddonRepository;
@@ -121,6 +124,26 @@ public class CancellationService {
     }
 
     /**
+     * Cancels one extra on a room of the user's booking. The room and its other
+     * extras are not affected, also when it is the room's last extra. The
+     * payment-service is told inside the transaction, before the commit: if it
+     * cannot be told, nothing is cancelled. Nothing is sent to inventory: extras are not held there.
+     *
+     * @param userId    the id of the user
+     * @param bookingId the id of the booking
+     * @param itemId    the id of the room
+     * @param extraId   the inventory id of the extra on the room
+     * @throws NotFoundException           if the user has no booking with this id, or the room or the extra is not in it
+     * @throws ConflictException           if the booking is cancelled, being cancelled right now, or has started,
+     *                                     or the room or the extra is already cancelled
+     * @throws ServiceUnavailableException if the payment-service could not be told, so nothing was cancelled
+     */
+    public void cancelMyExtra(UUID userId, UUID bookingId, UUID itemId, UUID extraId){
+        inCancellationTransaction("extra", bookingId, userId, () -> cancelExtraInTransaction(userId, bookingId, itemId, extraId));
+        log.info("Extra {} on room {} of booking {} cancelled by user {}", extraId, itemId, bookingId, userId);
+    }
+
+    /**
      * Steps 1-4 of cancelling a whole booking. Runs inside the transaction,
      * which is committed (step 5) when this returns, and rolled back if it throws.
      *
@@ -191,6 +214,42 @@ public class CancellationService {
     }
 
     /**
+     * Cancels one extra inside the transaction, which is committed when this
+     * returns, and rolled back if it throws. Uses targeted queries instead of
+     * loading the whole booking, so a booking with many rooms and extras costs
+     * no more memory than a small one.
+     *
+     * @param userId    the id of the user
+     * @param bookingId the id of the booking
+     * @param itemId    the id of the room
+     * @param extraId   the inventory id of the extra on the room
+     * @return nothing
+     */
+    private Void cancelExtraInTransaction(UUID userId, UUID bookingId, UUID itemId, UUID extraId){
+        // A missing booking, room or extra gives the same answer, so nobody learns which ids exist
+        Booking booking = lockMyBooking(userId, bookingId, "Extra not found");
+        bookingItemRepository.findByItemIdAndBooking_BookingId(itemId, bookingId)
+                .orElseThrow(() -> new NotFoundException("Extra not found"));
+        BookingAddon addon = bookingAddonRepository.findByItem_ItemIdAndExtraId(itemId, extraId)
+                .orElseThrow(() -> new NotFoundException("Extra not found"));
+
+        checkCanBeCancelled(booking);
+        // A cancelled room's extras are cancelled with it
+        if (cancelledItemRepository.existsByItem_ItemId(itemId)) throw new ConflictException("This room is already cancelled");
+        if (cancelledAddonRepository.existsByAddon_AddonId(addon.getAddonId())) throw new ConflictException("This extra is already cancelled");
+
+        Instant now = Instant.now();
+        cancelledAddonRepository.save(new CancelledAddon(addon, booking, now, CancelledBy.CUSTOMER));
+        // Write it to the database now, so a database problem shows before the payment-service is told.
+        // The UNIQUE addon_id is a second guard against cancelling the same extra twice
+        cancelledAddonRepository.flush();
+
+        paymentEventPublisher.addonCancelled(new AddonCancelledPaymentEvent(
+                bookingId, addon.getAddonId(), userId, addon.getPrice(), booking.getStartTime(), now, false));
+        return null;
+    }
+
+    /**
      * Runs a cancellation in one transaction, and turns its failures into
      * errors the user understands. An exception rolls everything back.
      *
@@ -217,6 +276,18 @@ public class CancellationService {
 
     /**
      * Finds the user's booking and locks its row without waiting. Must be called inside the transaction.
+     * <p>
+     * Every cancellation locks the <b>whole booking</b>, also when only one room or one extra is cancelled,
+     * not just that room or extra. With separate locks per room or extra, two cancellations on the same
+     * booking could run at the same time and miss each other's changes, which are not committed yet:
+     * <ul>
+     *     <li>A room (or extra) and the whole booking cancelled at the same moment: the whole-booking
+     *     cancellation does not see the room as cancelled, and counts it in the amount to refund again.
+     *     The payment-service would refund the room twice, and the booking-service would not know.</li>
+     *     <li>Two rooms cancelled at the same moment: each sees the other as still active, so neither
+     *     cancels the booking, leaving an active booking with no active rooms.</li>
+     * </ul>
+     * With one lock per booking, they run one after the other, and the second sees what the first did.
      *
      * @param userId          the id of the user
      * @param bookingId       the id of the booking

@@ -169,3 +169,6 @@ gateway:
     - path: /bookings/me/{bookingId}/items/{itemId}/cancel
       methods: [POST]
       allowed-levels: [0]
+    - path: /bookings/me/{bookingId}/items/{itemId}/extras/{extraId}/cancel
+      methods: [POST]
+      allowed-levels: [0]
