@@ -1,8 +1,12 @@
 package com.example.bookingserviceproject.repository;
 
 import com.example.bookingserviceproject.model.Booking;
+import jakarta.persistence.LockModeType;
+import jakarta.persistence.QueryHint;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.QueryHints;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -28,6 +32,21 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
      * @return the booking, or empty if the user has no booking with this id
      */
     Optional<Booking> findByBookingIdAndUserId(UUID bookingId, UUID userId);
+
+    /**
+     * Finds the user's booking and locks its row until the transaction ends, so
+     * only one request can change it at a time. With a lock timeout of 0
+     * ({@code FOR UPDATE NOWAIT}), a second request does not wait: it fails at
+     * once with a {@link org.springframework.dao.PessimisticLockingFailureException}.
+     * Must be called inside a transaction.
+     *
+     * @param bookingId the id of the booking
+     * @param userId    the id of the user
+     * @return the locked booking, or empty if the user has no booking with this id
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @QueryHints(@QueryHint(name = "jakarta.persistence.lock.timeout", value = "0"))
+    Optional<Booking> findLockedByBookingIdAndUserId(UUID bookingId, UUID userId);
 
     /**
      * The user's upcoming bookings: not cancelled, starting now or later.

@@ -44,16 +44,20 @@ public class BookingResMapper {
                 .map(cancelled -> cancelled.getAddon().getAddonId())
                 .collect(Collectors.toSet());
 
+        // A cancelled booking is an umbrella: its rooms and extras count as cancelled, and so do the extras of a cancelled room
         List<BookingResponse.Item> items = details.items().stream()
                 .sorted(ITEM_ORDER)
-                .map(item -> toItem(
-                        item,
-                        cancelledItemIds.contains(item.getItemId()),
-                        imagesByRoomType.get(item.getRoomTypeId()),
-                        addonsByItem.getOrDefault(item.getItemId(), List.of()).stream()
-                                .sorted(Comparator.comparing(BookingAddon::getName))
-                                .map(addon -> toExtra(addon, cancelledAddonIds.contains(addon.getAddonId())))
-                                .toList()))
+                .map(item -> {
+                    boolean itemCancelled = booking.isCancelled() || cancelledItemIds.contains(item.getItemId());
+                    return toItem(
+                            item,
+                            itemCancelled,
+                            imagesByRoomType.get(item.getRoomTypeId()),
+                            addonsByItem.getOrDefault(item.getItemId(), List.of()).stream()
+                                    .sorted(Comparator.comparing(BookingAddon::getName))
+                                    .map(addon -> toExtra(addon, itemCancelled || cancelledAddonIds.contains(addon.getAddonId())))
+                                    .toList());
+                })
                 .toList();
 
         return new BookingResponse(

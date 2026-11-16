@@ -5,6 +5,7 @@ import com.example.bookingserviceproject.dto.response.BookingResponse;
 import com.example.bookingserviceproject.dto.response.Envelopes;
 import com.example.bookingserviceproject.dto.response.MyBookingsResponse;
 import com.example.bookingserviceproject.service.BookingService;
+import com.example.bookingserviceproject.service.CancellationService;
 import com.example.bookingserviceproject.service.CheckoutService;
 import com.example.bookingserviceproject.utils.ClientResponse;
 import jakarta.validation.Valid;
@@ -23,16 +24,19 @@ import java.util.UUID;
 public class BookingController {
     private final CheckoutService checkoutService;
     private final BookingService bookingService;
+    private final CancellationService cancellationService;
 
     /**
      * Creates the controller with the services it delegates to.
      *
-     * @param checkoutService service that confirms bookings
-     * @param bookingService  service that lists and looks up bookings
+     * @param checkoutService     service that confirms bookings
+     * @param bookingService      service that lists and looks up bookings
+     * @param cancellationService service that cancels bookings
      */
-    public BookingController(CheckoutService checkoutService, BookingService bookingService){
+    public BookingController(CheckoutService checkoutService, BookingService bookingService, CancellationService cancellationService){
         this.checkoutService = checkoutService;
         this.bookingService = bookingService;
+        this.cancellationService = cancellationService;
     }
 
     /**
@@ -83,5 +87,21 @@ public class BookingController {
     ){
         BookingResponse booking = bookingService.getMyBooking(userId, bookingId);
         return ClientResponse.ok(new Envelopes.BookingResult(booking));
+    }
+
+    /**
+     * Cancels one of the user's upcoming bookings, with all its rooms and extras.
+     *
+     * @param bookingId the id of the booking
+     * @param userId    the id of the signed-in user, set by the gateway
+     * @return a 204 response without a body
+     */
+    @PostMapping("/bookings/me/{bookingId}/cancel")
+    public ResponseEntity<Void> cancelMyBooking(
+            @PathVariable UUID bookingId,
+            @RequestHeader("X-User-Id") UUID userId
+    ){
+        cancellationService.cancelMyBooking(userId, bookingId);
+        return ClientResponse.noContent();
     }
 }

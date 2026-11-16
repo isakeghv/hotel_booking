@@ -116,6 +116,13 @@ public class Booking extends AssignedIdEntity {
     }
 
     /**
+     * Cancels the whole booking. Its rooms and extras count as cancelled too.
+     */
+    public void cancel(){
+        this.cancelled = true;
+    }
+
+    /**
      * @return the number of nights, from the earliest check-in date to the latest check-out date
      */
     public int getNights(){

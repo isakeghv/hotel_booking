@@ -1,22 +1,26 @@
 package com.example.bookingserviceproject.messaging;
 
+import com.example.bookingserviceproject.dto.event.BookingCancelledEvent;
 import com.example.bookingserviceproject.dto.event.ReservationCancelledEvent;
 import com.example.bookingserviceproject.dto.event.ReservationConfirmedEvent;
 import com.example.bookingserviceproject.dto.event.ReservationItemRemoveEvent;
 import com.example.bookingserviceproject.exception.EventPublishException;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
- * Sends the events the inventory-service listens to. Events are keyed by the
- * user, so all events for one user's cart go to the same partition.
+ * Sends the events the inventory-service listens to. Cart events are keyed by
+ * the user, so all events for one user's cart go to the same partition.
+ * Booking events are keyed by the booking.
  */
 @Component
 public class InventoryEventPublisher {
     private static final String RESERVATION_ITEM_REMOVE = "reservation-item-remove";
     private static final String RESERVATION_CANCELLED = "reservation-cancelled";
     private static final String RESERVATION_CONFIRMED = "reservation-confirmed";
+    private static final String BOOKING_CANCELLED = "booking-cancelled";
 
     private final EventSender eventSender;
 
@@ -61,5 +65,17 @@ public class InventoryEventPublisher {
      */
     public void reservationConfirmed(UUID userId){
         eventSender.sendAndWait(RESERVATION_CONFIRMED, userId.toString(), new ReservationConfirmedEvent(userId));
+    }
+
+    /**
+     * Tells inventory that a paid booking was cancelled, so it frees the rooms.
+     * Does not wait for Kafka, and never throws: a failure is only logged, and
+     * the rooms stay blocked until it is fixed.
+     *
+     * @param bookingId the cancelled booking
+     * @param itemIds   the ids of the booking's rooms
+     */
+    public void bookingCancelled(UUID bookingId, List<UUID> itemIds){
+        eventSender.sendWithoutWaiting(BOOKING_CANCELLED, bookingId.toString(), new BookingCancelledEvent(itemIds));
     }
 }
