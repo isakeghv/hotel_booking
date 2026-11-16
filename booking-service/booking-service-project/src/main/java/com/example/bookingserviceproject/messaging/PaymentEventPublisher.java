@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class PaymentEventPublisher {
-    private static final String BOOKING_CANCELLED_PAYMENT = "booking-cancelled-payment";
+    private static final String PAYMENT_BOOKING_CANCELLED = "payment-booking-cancelled";
 
     private final EventSender eventSender;
 
@@ -32,6 +32,6 @@ public class PaymentEventPublisher {
      * @throws EventPublishException if the event could not be sent
      */
     public void bookingCancelled(BookingCancelledPaymentEvent event){
-        eventSender.sendAndWait(BOOKING_CANCELLED_PAYMENT, event.bookingId().toString(), event);
+        eventSender.sendAndWait(PAYMENT_BOOKING_CANCELLED, event.bookingId().toString(), event);
     }
 }
