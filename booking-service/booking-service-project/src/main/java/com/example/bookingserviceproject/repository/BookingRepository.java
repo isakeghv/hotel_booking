@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -17,6 +18,16 @@ import java.util.UUID;
  * page without a count query.
  */
 public interface BookingRepository extends JpaRepository<Booking, UUID> {
+
+    /**
+     * Finds a booking only if it belongs to the user, so a booking that does
+     * not exist and one that belongs to someone else look the same.
+     *
+     * @param bookingId the id of the booking
+     * @param userId    the id of the user
+     * @return the booking, or empty if the user has no booking with this id
+     */
+    Optional<Booking> findByBookingIdAndUserId(UUID bookingId, UUID userId);
 
     /**
      * The user's upcoming bookings: not cancelled, starting now or later.

@@ -7,6 +7,7 @@ import jakarta.persistence.Table;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 /**
@@ -112,5 +113,12 @@ public class Booking extends AssignedIdEntity {
 
     public boolean isCancelled(){
         return cancelled;
+    }
+
+    /**
+     * @return the number of nights, from the earliest check-in date to the latest check-out date
+     */
+    public int getNights(){
+        return (int) ChronoUnit.DAYS.between(startTime.toLocalDate(), endTime.toLocalDate());
     }
 }

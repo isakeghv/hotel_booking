@@ -68,4 +68,20 @@ public class BookingController {
         MyBookingsResponse bookings = bookingService.getMyBookings(userId, page);
         return ClientResponse.ok(new Envelopes.MyBookingsResult(bookings));
     }
+
+    /**
+     * Returns one of the user's bookings, with its rooms, extras and what is cancelled.
+     *
+     * @param bookingId the id of the booking
+     * @param userId    the id of the signed-in user, set by the gateway
+     * @return a response with the booking
+     */
+    @GetMapping("/bookings/me/{bookingId}")
+    public ResponseEntity<Envelopes.BookingResult> getMyBooking(
+            @PathVariable UUID bookingId,
+            @RequestHeader("X-User-Id") UUID userId
+    ){
+        BookingResponse booking = bookingService.getMyBooking(userId, bookingId);
+        return ClientResponse.ok(new Envelopes.BookingResult(booking));
+    }
 }

@@ -1,6 +1,7 @@
 package com.example.bookingserviceproject.repository;
 
 import com.example.bookingserviceproject.model.BookingAddon;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -12,8 +13,12 @@ import java.util.UUID;
 public interface BookingAddonRepository extends JpaRepository<BookingAddon, UUID> {
 
     /**
+     * Loads the extras of a booking. The room each extra belongs to is fetched
+     * in the same query, so the extras can be grouped by room without a transaction.
+     *
      * @param bookingId the id of a booking
      * @return the extras on all of the booking's rooms
      */
+    @EntityGraph(attributePaths = "item")
     List<BookingAddon> findAllByBooking_BookingId(UUID bookingId);
 }

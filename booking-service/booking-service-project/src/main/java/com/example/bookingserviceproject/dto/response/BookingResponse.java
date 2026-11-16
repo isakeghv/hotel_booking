@@ -1,62 +1,64 @@
 package com.example.bookingserviceproject.dto.response;
 
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
 /**
- * A confirmed booking. Prices are given the same way as in the confirmation
- * email: each room's total includes its extras, and extras have no price of
- * their own. Inventory's room type and variant ids are left out.
+ * A booking, as the customer sees it. Left out on purpose: the room number
+ * (for staff only), who cancelled and when, and inventory's variant and extra ids.
  *
  * @param bookingId the id of the booking
- * @param createdAt when the booking was made (UTC)
  * @param from      the earliest check-in of the booking's rooms
- * @param to        the latest check-out of the booking's rooms
+ * @param nights    the number of nights, from the earliest check-in to the latest check-out
  * @param currency  the currency of all prices
- * @param total     the price of the whole booking
+ * @param total     the price of the whole booking, as booked (also after a cancellation)
+ * @param cancelled true if the whole booking is cancelled
  * @param items     the booked rooms
  */
 public record BookingResponse(
         UUID bookingId,
-        Instant createdAt,
         LocalDateTime from,
-        LocalDateTime to,
+        int nights,
         String currency,
         int total,
+        boolean cancelled,
         List<Item> items
 ) {
     /**
      * One booked room.
      *
      * @param itemId     the id of the booked room
-     * @param roomNumber the room number
+     * @param roomTypeId the id of the room type in the inventory-service
      * @param roomType   the name of the room type
      * @param variant    the name of the variant
      * @param from       check-in date and time
-     * @param to         check-out date and time
      * @param nights     the number of nights
+     * @param price      the price of the room alone, for its nights
+     * @param cancelled  true if this room is cancelled
+     * @param image      the room type's primary image. Always present
      * @param extras     the extras on the room. Always present, empty if the room has none
-     * @param total      the price of the room including its extras, for its nights
      */
     public record Item(
             UUID itemId,
-            int roomNumber,
+            UUID roomTypeId,
             String roomType,
             String variant,
             LocalDateTime from,
-            LocalDateTime to,
             int nights,
-            List<Extra> extras,
-            int total
+            int price,
+            boolean cancelled,
+            ImageResponse image,
+            List<Extra> extras
     ) {}
 
     /**
-     * One extra on a booked room. Its price is included in the room's total.
+     * One extra on a booked room.
      *
-     * @param name   the name of the extra
-     * @param amount how many of the extra
+     * @param name      the name of the extra
+     * @param amount    how many of the extra
+     * @param price     the price of this extra for the room, all of them together
+     * @param cancelled true if this extra is cancelled
      */
-    public record Extra(String name, int amount) {}
+    public record Extra(String name, int amount, int price, boolean cancelled) {}
 }

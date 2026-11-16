@@ -22,7 +22,7 @@ public record MyBookingsResponse(
      *
      * @param bookingId the id of the booking, used to open it
      * @param from      the earliest check-in of the booking's rooms
-     * @param to        the latest check-out of the booking's rooms
+     * @param nights    the number of nights, from the earliest check-in to the latest check-out
      * @param rooms     the number of rooms in the booking
      * @param total     the price of the whole booking
      * @param currency  the currency of the price
@@ -31,19 +31,10 @@ public record MyBookingsResponse(
     public record Overview(
             UUID bookingId,
             LocalDateTime from,
-            LocalDateTime to,
+            int nights,
             int rooms,
             int total,
             String currency,
-            Image image
+            ImageResponse image
     ) {}
-
-    /**
-     * An image from the inventory-service. Both fields are null if there is no
-     * image, or it could not be fetched, so the property itself is never missing.
-     *
-     * @param filePath the full URL of the image, or null
-     * @param altText  the text describing the image, or null
-     */
-    public record Image(String filePath, String altText) {}
 }

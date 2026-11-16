@@ -3,6 +3,7 @@ package com.example.bookingserviceproject.service;
 import com.example.bookingserviceproject.cache.BookingCart;
 import com.example.bookingserviceproject.cache.CartContents;
 import com.example.bookingserviceproject.client.PaymentClient;
+import com.example.bookingserviceproject.dto.inventory.InventoryPrimaryImage;
 import com.example.bookingserviceproject.dto.payment.PaymentResult;
 import com.example.bookingserviceproject.dto.request.CardDetails;
 import com.example.bookingserviceproject.dto.response.BookingResponse;
@@ -17,6 +18,7 @@ import com.example.bookingserviceproject.mapper.BookingNotificationMapper;
 import com.example.bookingserviceproject.mapper.BookingResMapper;
 import com.example.bookingserviceproject.messaging.InventoryEventPublisher;
 import com.example.bookingserviceproject.messaging.NotificationEventPublisher;
+import com.example.bookingserviceproject.model.BookingDetails;
 import com.example.bookingserviceproject.model.BookingItem;
 import com.example.bookingserviceproject.utils.PriceUtils;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
@@ -28,6 +30,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -49,6 +52,9 @@ public class CheckoutService {
     private static final Duration CONFIRM_EXTENSION = Duration.ofMinutes(3);
     private static final String CART_EMPTY = "Your cart is empty";
     private static final String PAYMENT_UNAVAILABLE = "Your payment could not be confirmed. Please try again";
+    // Confirm does not fetch images, so a slow inventory never delays the answer after a payment.
+    // The front end shows them from GET /booking/bookings/me/{bookingId}
+    private static final Map<UUID, InventoryPrimaryImage> NO_IMAGES = Map.of();
 
     private final BookingCart bookingCart;
     private final BookingService bookingService;
@@ -103,7 +109,7 @@ public class CheckoutService {
         if (saved.isPresent()){
             log.warn("Booking {} of user {} was already saved, but its cart was not deleted. Returning the booking", cart.bookingId(), userId);
             deleteCart(userId);
-            return bookingResMapper.toResponse(saved.get());
+            return bookingResMapper.toResponse(saved.get(), NO_IMAGES);
         }
 
         // 3. Lock the cart: no other confirm can start, and the cart cannot be changed
@@ -190,7 +196,7 @@ public class CheckoutService {
         notificationEventPublisher.bookingConfirmed(bookingNotificationMapper.toNotification(details));
 
         log.info("Booking {} of user {} confirmed (payment {})", cart.bookingId(), userId, payment.paymentId());
-        return bookingResMapper.toResponse(details);
+        return bookingResMapper.toResponse(details, NO_IMAGES);
     }
 
     /**

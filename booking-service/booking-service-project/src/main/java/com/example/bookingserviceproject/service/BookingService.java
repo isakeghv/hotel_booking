@@ -4,17 +4,23 @@ import com.example.bookingserviceproject.cache.CartContents;
 import com.example.bookingserviceproject.cache.CartItem;
 import com.example.bookingserviceproject.client.InventoryClient;
 import com.example.bookingserviceproject.dto.inventory.InventoryPrimaryImage;
+import com.example.bookingserviceproject.dto.response.BookingResponse;
 import com.example.bookingserviceproject.dto.response.MyBookingsResponse;
+import com.example.bookingserviceproject.exception.NotFoundException;
 import com.example.bookingserviceproject.exception.PassThroughException;
 import com.example.bookingserviceproject.exception.ServiceUnavailableException;
 import com.example.bookingserviceproject.mapper.BookingMapper;
+import com.example.bookingserviceproject.mapper.BookingResMapper;
 import com.example.bookingserviceproject.mapper.MyBookingsResMapper;
+import com.example.bookingserviceproject.model.BookingDetails;
 import com.example.bookingserviceproject.model.Booking;
 import com.example.bookingserviceproject.model.BookingAddon;
 import com.example.bookingserviceproject.model.BookingItem;
 import com.example.bookingserviceproject.repository.BookingAddonRepository;
 import com.example.bookingserviceproject.repository.BookingItemRepository;
 import com.example.bookingserviceproject.repository.BookingRepository;
+import com.example.bookingserviceproject.repository.CancelledAddonRepository;
+import com.example.bookingserviceproject.repository.CancelledItemRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.PageRequest;
@@ -44,6 +50,8 @@ public class BookingService {
 
     // Bookings per list per page in the user's overviews
     private static final int PAGE_SIZE = 10;
+    // Inventory's limit of room types per request for primary images
+    private static final int MAX_IMAGES_PER_REQUEST = 30;
     // A booking's image is the primary image of its first room's room type
     private static final Comparator<BookingItem> FIRST_ROOM = Comparator.comparing(BookingItem::getFromTime)
             .thenComparing(BookingItem::getRoomTypeName);
@@ -51,29 +59,40 @@ public class BookingService {
     private final BookingRepository bookingRepository;
     private final BookingItemRepository bookingItemRepository;
     private final BookingAddonRepository bookingAddonRepository;
+    private final CancelledItemRepository cancelledItemRepository;
+    private final CancelledAddonRepository cancelledAddonRepository;
     private final BookingMapper bookingMapper;
     private final InventoryClient inventoryClient;
     private final MyBookingsResMapper myBookingsResMapper;
+    private final BookingResMapper bookingResMapper;
 
     /**
      * Creates the service with its dependencies.
      *
      * @param bookingRepository      the bookings
      * @param bookingItemRepository  the booked rooms
-     * @param bookingAddonRepository the extras on booked rooms
-     * @param bookingMapper          mapper from a cart to the entities
-     * @param inventoryClient        client for the inventory-service, which has the room types' images
-     * @param myBookingsResMapper    mapper from bookings to their overviews
+     * @param bookingAddonRepository   the extras on booked rooms
+     * @param cancelledItemRepository  the cancelled rooms
+     * @param cancelledAddonRepository the cancelled extras
+     * @param bookingMapper            mapper from a cart to the entities
+     * @param inventoryClient          client for the inventory-service, which has the room types' images
+     * @param myBookingsResMapper      mapper from bookings to their overviews
+     * @param bookingResMapper         mapper from a booking to its response
      */
     public BookingService(BookingRepository bookingRepository, BookingItemRepository bookingItemRepository,
-                          BookingAddonRepository bookingAddonRepository, BookingMapper bookingMapper,
-                          InventoryClient inventoryClient, MyBookingsResMapper myBookingsResMapper){
+                          BookingAddonRepository bookingAddonRepository, CancelledItemRepository cancelledItemRepository,
+                          CancelledAddonRepository cancelledAddonRepository, BookingMapper bookingMapper,
+                          InventoryClient inventoryClient, MyBookingsResMapper myBookingsResMapper,
+                          BookingResMapper bookingResMapper){
         this.bookingRepository = bookingRepository;
         this.bookingItemRepository = bookingItemRepository;
         this.bookingAddonRepository = bookingAddonRepository;
+        this.cancelledItemRepository = cancelledItemRepository;
+        this.cancelledAddonRepository = cancelledAddonRepository;
         this.bookingMapper = bookingMapper;
         this.inventoryClient = inventoryClient;
         this.myBookingsResMapper = myBookingsResMapper;
+        this.bookingResMapper = bookingResMapper;
     }
 
     /**
@@ -101,22 +120,54 @@ public class BookingService {
                 .map(addon -> bookingMapper.toAddon(addon, booking, itemsById.get(addon.itemId())))
                 .toList());
 
-        return new BookingDetails(booking, items, addons);
+        // A new booking has no cancellations
+        return new BookingDetails(booking, items, addons, List.of(), List.of());
     }
 
     /**
-     * Loads a booking with its rooms and extras, one query per table.
+     * Loads a booking with its rooms, extras and cancellations, one query per table.
      *
      * @param bookingId the id of the booking
-     * @return the booking, rooms and extras, or empty if there is no such booking
+     * @return the booking with everything that belongs to it, or empty if there is no such booking
      */
-    @Transactional(readOnly = true)
     public Optional<BookingDetails> findDetails(UUID bookingId){
-        // Rooms are loaded before extras, so the extras point to the loaded rooms
-        return bookingRepository.findById(bookingId).map(booking -> new BookingDetails(
+        return bookingRepository.findById(bookingId).map(this::loadDetails);
+    }
+
+    /**
+     * Returns one of the user's bookings, with the primary image of each room's
+     * room type. If inventory cannot be reached, the booking is returned without images.
+     *
+     * @param userId    the id of the user
+     * @param bookingId the id of the booking
+     * @return the booking
+     * @throws NotFoundException if the user has no booking with this id (it does not exist, or belongs to someone else)
+     */
+    public BookingResponse getMyBooking(UUID userId, UUID bookingId){
+        BookingDetails details = bookingRepository.findByBookingIdAndUserId(bookingId, userId)
+                .map(this::loadDetails)
+                .orElseThrow(() -> new NotFoundException("Booking not found"));
+
+        Set<UUID> roomTypeIds = details.items().stream().map(BookingItem::getRoomTypeId).collect(Collectors.toSet());
+        return bookingResMapper.toResponse(details, primaryImages(roomTypeIds));
+    }
+
+    /**
+     * Loads everything that belongs to a booking, one query per table. Each
+     * query fetches what the mappers read from it (e.g. an extra's room), so no
+     * transaction has to stay open, e.g. while inventory is called afterwards.
+     *
+     * @param booking the booking
+     * @return the booking with its rooms, extras and cancellations
+     */
+    private BookingDetails loadDetails(Booking booking){
+        UUID bookingId = booking.getBookingId();
+        return new BookingDetails(
                 booking,
                 bookingItemRepository.findAllByBooking_BookingId(bookingId),
-                bookingAddonRepository.findAllByBooking_BookingId(bookingId)));
+                bookingAddonRepository.findAllByBooking_BookingId(bookingId),
+                cancelledItemRepository.findAllByBooking_BookingId(bookingId),
+                cancelledAddonRepository.findAllByBooking_BookingId(bookingId));
     }
 
     /**
@@ -149,7 +200,7 @@ public class BookingService {
                 : bookingItemRepository.findAllByBooking_BookingIdIn(bookingIds).stream()
                         .collect(Collectors.groupingBy(item -> item.getBooking().getBookingId()));
 
-        // The first room's room type of each booking. At most 30 (3 lists of 10), inventory's limit per request
+        // The first room's room type of each booking: at most 30 (3 lists of 10)
         Map<UUID, UUID> roomTypeByBooking = roomsByBooking.entrySet().stream()
                 .collect(Collectors.toMap(Map.Entry::getKey,
                         entry -> entry.getValue().stream().min(FIRST_ROOM).orElseThrow().getRoomTypeId()));
@@ -176,8 +227,11 @@ public class BookingService {
      */
     private Map<UUID, InventoryPrimaryImage> primaryImages(Set<UUID> roomTypeIds){
         if (roomTypeIds.isEmpty()) return Map.of();
+        // Never more than inventory accepts. Room types beyond the limit are shown without an image
+        Set<UUID> requested = roomTypeIds.size() <= MAX_IMAGES_PER_REQUEST ? roomTypeIds
+                : roomTypeIds.stream().limit(MAX_IMAGES_PER_REQUEST).collect(Collectors.toSet());
         try {
-            return inventoryClient.getPrimaryImages(roomTypeIds).stream()
+            return inventoryClient.getPrimaryImages(requested).stream()
                     .filter(image -> image.roomTypeId() != null)
                     .collect(Collectors.toMap(InventoryPrimaryImage::roomTypeId, Function.identity(), (first, second) -> first));
         } catch (ServiceUnavailableException | PassThroughException e){

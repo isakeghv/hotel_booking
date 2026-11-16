@@ -4,7 +4,7 @@ import com.example.bookingserviceproject.dto.event.BookingConfirmedNotification;
 import com.example.bookingserviceproject.model.Booking;
 import com.example.bookingserviceproject.model.BookingAddon;
 import com.example.bookingserviceproject.model.BookingItem;
-import com.example.bookingserviceproject.service.BookingDetails;
+import com.example.bookingserviceproject.model.BookingDetails;
 import org.springframework.stereotype.Component;
 
 import java.util.Comparator;

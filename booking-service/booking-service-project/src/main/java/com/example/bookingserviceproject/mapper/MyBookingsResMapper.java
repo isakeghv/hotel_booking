@@ -1,6 +1,7 @@
 package com.example.bookingserviceproject.mapper;
 
 import com.example.bookingserviceproject.dto.inventory.InventoryPrimaryImage;
+import com.example.bookingserviceproject.dto.response.ImageResponse;
 import com.example.bookingserviceproject.dto.response.MyBookingsResponse;
 import com.example.bookingserviceproject.model.Booking;
 import org.springframework.stereotype.Component;
@@ -10,7 +11,6 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class MyBookingsResMapper {
-    private static final MyBookingsResponse.Image NO_IMAGE = new MyBookingsResponse.Image(null, null);
 
     /**
      * Builds the overview of one booking.
@@ -24,10 +24,10 @@ public class MyBookingsResMapper {
         return new MyBookingsResponse.Overview(
                 booking.getBookingId(),
                 booking.getStartTime(),
-                booking.getEndTime(),
+                booking.getNights(),
                 rooms,
                 booking.getTotalPrice(),
                 booking.getCurrency(),
-                image == null ? NO_IMAGE : new MyBookingsResponse.Image(image.filePath(), image.altText()));
+                image == null ? ImageResponse.NONE : new ImageResponse(image.filePath(), image.altText()));
     }
 }
