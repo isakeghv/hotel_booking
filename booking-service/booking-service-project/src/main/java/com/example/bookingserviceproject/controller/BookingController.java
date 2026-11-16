@@ -104,4 +104,23 @@ public class BookingController {
         cancellationService.cancelMyBooking(userId, bookingId);
         return ClientResponse.noContent();
     }
+
+    /**
+     * Cancels one room of the user's upcoming booking, with the extras on it.
+     * Cancelling the last active room cancels the whole booking.
+     *
+     * @param bookingId the id of the booking
+     * @param itemId    the id of the room
+     * @param userId    the id of the signed-in user, set by the gateway
+     * @return a 204 response without a body
+     */
+    @PostMapping("/bookings/me/{bookingId}/items/{itemId}/cancel")
+    public ResponseEntity<Void> cancelMyRoom(
+            @PathVariable UUID bookingId,
+            @PathVariable UUID itemId,
+            @RequestHeader("X-User-Id") UUID userId
+    ){
+        cancellationService.cancelMyRoom(userId, bookingId, itemId);
+        return ClientResponse.noContent();
+    }
 }

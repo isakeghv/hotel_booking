@@ -29,23 +29,53 @@ public record BookingDetails(
      * @return the price of the active rooms and extras
      */
     public int activeAmount(){
-        Set<UUID> cancelledItemIds = cancelledItems.stream()
-                .map(cancelled -> cancelled.getItem().getItemId())
-                .collect(Collectors.toSet());
+        return activeItems().stream().mapToInt(this::activeAmountOf).sum();
+    }
+
+    /**
+     * @return the rooms that are not cancelled on their own
+     */
+    public List<BookingItem> activeItems(){
+        Set<UUID> cancelledItemIds = cancelledItemIds();
+        return items.stream()
+                .filter(item -> !cancelledItemIds.contains(item.getItemId()))
+                .toList();
+    }
+
+    /**
+     * @param itemId the id of a room of this booking
+     * @return true if the room is cancelled on its own
+     */
+    public boolean isItemCancelled(UUID itemId){
+        return cancelledItemIds().contains(itemId);
+    }
+
+    /**
+     * The price of one room and its extras that are not cancelled on their own.
+     * Extras on the room count as cancelled when the room is, so this is what
+     * cancelling the room takes away.
+     *
+     * @param item a room of this booking
+     * @return the room's price plus the prices of its active extras
+     */
+    public int activeAmountOf(BookingItem item){
         Set<UUID> cancelledAddonIds = cancelledAddons.stream()
                 .map(cancelled -> cancelled.getAddon().getAddonId())
                 .collect(Collectors.toSet());
-
-        int rooms = items.stream()
-                .filter(item -> !cancelledItemIds.contains(item.getItemId()))
-                .mapToInt(BookingItem::getPrice)
-                .sum();
-        // An extra on a cancelled room is cancelled with it
         int extras = addons.stream()
-                .filter(addon -> !cancelledItemIds.contains(addon.getItem().getItemId())
+                .filter(addon -> addon.getItem().getItemId().equals(item.getItemId())
                         && !cancelledAddonIds.contains(addon.getAddonId()))
                 .mapToInt(BookingAddon::getPrice)
                 .sum();
-        return rooms + extras;
+        return item.getPrice() + extras;
+    }
+
+    /**
+     * @return the ids of the rooms that are cancelled on their own
+     */
+    private Set<UUID> cancelledItemIds(){
+        return cancelledItems.stream()
+                .map(cancelled -> cancelled.getItem().getItemId())
+                .collect(Collectors.toSet());
     }
 }
