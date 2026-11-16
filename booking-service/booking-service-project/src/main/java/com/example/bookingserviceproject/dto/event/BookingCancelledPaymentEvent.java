@@ -5,7 +5,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
- * Sent on {@code booking-cancelled-payment} when a paid booking is cancelled,
+ * Sent on {@code payment-booking-cancelled} when a paid booking is cancelled,
  * so the payment-service decides whether to refund it (the 48 h rule, the same
  * for everyone). See payment-service-notes.md.
  *
