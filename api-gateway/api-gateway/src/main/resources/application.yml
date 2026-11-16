@@ -163,3 +163,6 @@ gateway:
     - path: /booking/bookings/me/{bookingId}
       methods: [GET]
       allowed-levels: [0]
+    - path: /booking/bookings/me/{bookingId}/cancel
+      methods: [POST]
+      allowed-levels: [0]
