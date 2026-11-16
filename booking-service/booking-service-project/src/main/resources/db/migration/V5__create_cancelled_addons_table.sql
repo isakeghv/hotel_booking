@@ -1,5 +1,6 @@
 -- One row per cancelled extra. Only cancelled extras get a row, so booking_addons holds no cancellation columns.
--- Cancelling a room also cancels its extras. cancellation_id lets the payment-service never refund the same extra twice.
+-- Cancelling a room also cancels its extras. The payment-service is told the addon_id (not cancellation_id,
+-- which is only used inside the booking-service).
 CREATE TABLE cancelled_addons(
     cancellation_id UUID PRIMARY KEY,
     -- UNIQUE: the database refuses a second cancellation of the same extra

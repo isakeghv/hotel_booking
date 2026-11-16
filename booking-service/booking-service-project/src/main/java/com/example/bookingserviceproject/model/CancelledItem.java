@@ -23,7 +23,7 @@ import java.util.UUID;
 @Table(name = "cancelled_items")
 public class CancelledItem {
 
-    // The payment-service's key for this cancellation, so the same room is never refunded twice
+    // Identifies this cancellation inside the booking-service. The payment-service is told the item_id instead
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID cancellationId;

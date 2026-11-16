@@ -1,6 +1,6 @@
 -- One row per cancelled room. Only cancelled rooms get a row, so booking_items holds no cancellation columns.
 -- cancelled_by only says who cancelled. Refunds are decided by the payment-service,
--- which uses cancellation_id to never refund the same room twice.
+-- which is told the item_id (not cancellation_id, which is only used inside the booking-service).
 CREATE TABLE cancelled_items(
     cancellation_id UUID PRIMARY KEY,
     -- UNIQUE: the database refuses a second cancellation of the same room (e.g. double clicks)

@@ -24,7 +24,7 @@ import java.util.UUID;
 @Table(name = "cancelled_addons")
 public class CancelledAddon {
 
-    // The payment-service's key for this cancellation, so the same extra is never refunded twice
+    // Identifies this cancellation inside the booking-service. The payment-service is told the addon_id instead
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID cancellationId;
