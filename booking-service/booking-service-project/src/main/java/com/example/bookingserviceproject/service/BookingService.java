@@ -196,25 +196,54 @@ public class BookingService {
                 .flatMap(List::stream)
                 .map(Booking::getBookingId)
                 .collect(Collectors.toSet());
-        Map<UUID, List<BookingItem>> roomsByBooking = bookingIds.isEmpty() ? Map.of()
-                : bookingItemRepository.findAllByBooking_BookingIdIn(bookingIds).stream()
-                        .collect(Collectors.groupingBy(item -> item.getBooking().getBookingId()));
+        Map<UUID, List<BookingItem>> activeRoomsByBooking = activeRooms(bookingIds);
 
-        // The first room's room type of each booking: at most 30 (3 lists of 10)
-        Map<UUID, UUID> roomTypeByBooking = roomsByBooking.entrySet().stream()
+        // The first active room's room type of each booking: at most 30 (3 lists of 10)
+        Map<UUID, UUID> roomTypeByBooking = activeRoomsByBooking.entrySet().stream()
                 .collect(Collectors.toMap(Map.Entry::getKey,
                         entry -> entry.getValue().stream().min(FIRST_ROOM).orElseThrow().getRoomTypeId()));
         Map<UUID, InventoryPrimaryImage> images = primaryImages(Set.copyOf(roomTypeByBooking.values()));
 
         Function<Booking, MyBookingsResponse.Overview> toOverview = booking -> myBookingsResMapper.toOverview(
                 booking,
-                roomsByBooking.getOrDefault(booking.getBookingId(), List.of()).size(),
+                activeRoomsByBooking.getOrDefault(booking.getBookingId(), List.of()).size(),
                 images.get(roomTypeByBooking.get(booking.getBookingId())));
 
         return new MyBookingsResponse(
                 upcoming.stream().map(toOverview).toList(),
                 previous.stream().map(toOverview).toList(),
                 cancelled.stream().map(toOverview).toList());
+    }
+
+    /**
+     * Loads the active rooms of several bookings, one query for the rooms and
+     * one for the cancelled rooms. A room is active if it was not cancelled on
+     * its own. A booking cancelled as a whole keeps the rooms it had when it was
+     * cancelled (the umbrella adds no rows).
+     * <p>
+     * If every room of a booking was cancelled one by one (its last room cancelled
+     * the booking), all its rooms are used instead, so the cancelled list never
+     * shows a booking with 0 rooms and no image.
+     *
+     * @param bookingIds the ids of the bookings
+     * @return the active rooms by booking id
+     */
+    private Map<UUID, List<BookingItem>> activeRooms(Set<UUID> bookingIds){
+        if (bookingIds.isEmpty()) return Map.of();
+
+        Map<UUID, List<BookingItem>> roomsByBooking = bookingItemRepository.findAllByBooking_BookingIdIn(bookingIds).stream()
+                .collect(Collectors.groupingBy(item -> item.getBooking().getBookingId()));
+        Set<UUID> cancelledItemIds = cancelledItemRepository.findAllByBooking_BookingIdIn(bookingIds).stream()
+                .map(cancelled -> cancelled.getItem().getItemId())
+                .collect(Collectors.toSet());
+
+        return roomsByBooking.entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, entry -> {
+                    List<BookingItem> active = entry.getValue().stream()
+                            .filter(item -> !cancelledItemIds.contains(item.getItemId()))
+                            .toList();
+                    return active.isEmpty() ? entry.getValue() : active;
+                }));
     }
 
     /**
