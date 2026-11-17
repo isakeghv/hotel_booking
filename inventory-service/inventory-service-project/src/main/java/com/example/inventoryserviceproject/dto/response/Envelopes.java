@@ -60,7 +60,9 @@ public final class Envelopes {
     public record VariantResult(VariantResponse variant) {}
 
     /** Body of several variants, keyed by variant id. */
-    public record VariantsByIdResult(Map<UUID, VariantIncludesResponse> variants) {}
+    public record VariantsByIdResult(
+            @Schema(description = "The variants found, keyed by variant id. Ids that do not match a variant are left out. Empty if none matched")
+            Map<UUID, VariantIncludesResponse> variants) {}
 
     // ----- Beds, extras and images -----
 

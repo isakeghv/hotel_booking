@@ -145,6 +145,22 @@ public class VariantController {
      * @param variantId  the id of the variant
      * @return a response with the variant and its included extras
      */
+    @Operation(
+            summary = "Get a variant with the extras it includes",
+            description = """
+                    **Access: Public.**
+
+                    Returns the variant's name and the extras it includes, each with its id, name and amount. \
+                    `amount` is always the real amount, also for extras whose amount is hidden in the variant list. \
+                    Inactive extras are left out. Inactive variants are still returned.
+
+                    For several variants at once, use `GET /inventory/variants`.
+
+                    **Response key:** `variant`.
+                    """)
+    @ApiResponse(responseCode = "200", description = "The variant")
+    @ApiResponse(responseCode = "400", content = @Content(schema = @Schema(implementation = Envelopes.ErrorResult.class)), description = "An id is not a valid UUID")
+    @ApiResponse(responseCode = "404", content = @Content(schema = @Schema(implementation = Envelopes.ErrorResult.class)), description = "The variant does not exist, or belongs to another room type")
     @GetMapping("/roomtypes/{roomTypeId}/variants/{variantId}")
     public ResponseEntity<Envelopes.VariantResult> getVariant(
             @PathVariable UUID roomTypeId,
@@ -161,8 +177,27 @@ public class VariantController {
      * @param query the validated variant ids, at most 30
      * @return a response with the variants, keyed by variant id
      */
+    @Operation(
+            summary = "Get several variants with the extras they include",
+            description = """
+                    **Access: Internal** (booking-service).
+
+                    Takes 1-30 variant ids, as `?variantIds=<id>,<id>` or `?variantIds=<id>&variantIds=<id>`. \
+                    The variants can belong to different room types.
+
+                    Returns a map keyed by variant id, so a variant is found directly by its id. \
+                    Ids that do not match a variant are **left out, without an error**: check whether the key exists. \
+                    Duplicate ids are returned once.
+
+                    Same content as `GET /inventory/roomtypes/{roomTypeId}/variants/{variantId}`: `amount` is always \
+                    the real amount, inactive extras are left out, and inactive variants are still returned.
+
+                    **Response key:** `variants`.
+                    """)
+    @ApiResponse(responseCode = "200", description = "The variants found, keyed by variant id")
+    @ApiResponse(responseCode = "400", content = @Content(schema = @Schema(implementation = Envelopes.ValidationErrorResult.class)), description = "Invalid input: no ids, more than 30, or an id that is not a valid UUID")
     @GetMapping("/variants")
-    public ResponseEntity<Envelopes.VariantsByIdResult> getVariants(@Valid @ModelAttribute ReviewVariantsQuery query){
+    public ResponseEntity<Envelopes.VariantsByIdResult> getVariants(@Valid @ParameterObject @ModelAttribute ReviewVariantsQuery query){
         Map<UUID, VariantIncludesResponse> variants = variantService.getVariants(query.variantIds());
         return ClientResponse.ok(new Envelopes.VariantsByIdResult(variants));
     }
