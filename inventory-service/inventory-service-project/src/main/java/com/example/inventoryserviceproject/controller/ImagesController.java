@@ -136,7 +136,7 @@ public class ImagesController {
      * Returns the primary image of each given room type. Room types without a
      * primary image are included, with the image-path and alt-text null.
      *
-     * @param request the validated room type ids, at most 30
+     * @param request the validated room type ids, at most 100
      * @return a response with one entry per distinct room type id
      */
     @Operation(
@@ -144,7 +144,7 @@ public class ImagesController {
             description = """
                     **Access: Internal.**
 
-                    Takes up to 30 room type ids in the body. Returns one entry per distinct id, in the order given.
+                    Takes up to 100 room type ids in the body. Returns one entry per distinct id, in the order given.
 
                     A room type without a primary image, or one that does not exist, is **not an error**: \
                     it is returned with `filePath` and `altText` set to `null`.
@@ -152,7 +152,7 @@ public class ImagesController {
                     **Response key:** `primaryImages`.
                     """)
     @ApiResponse(responseCode = "200", description = "The primary images")
-    @ApiResponse(responseCode = "400", content = @Content(schema = @Schema(implementation = Envelopes.ValidationErrorResult.class)), description = "Invalid input: no ids, more than 30, or an id that is null or not a valid UUID")
+    @ApiResponse(responseCode = "400", content = @Content(schema = @Schema(implementation = Envelopes.ValidationErrorResult.class)), description = "Invalid input: no ids, more than 100, or an id that is null or not a valid UUID")
     @PostMapping("/roomtypes/images/primary")
     public ResponseEntity<Envelopes.PrimaryImagesResult> getPrimaryImages(@Valid @RequestBody ReviewPrimaryImagesQuery request){
         List<PrimaryImageResponse> images = imageService.getPrimaryImages(request.roomTypeIds());

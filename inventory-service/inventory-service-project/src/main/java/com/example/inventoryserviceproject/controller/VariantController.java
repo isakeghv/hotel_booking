@@ -174,7 +174,7 @@ public class VariantController {
      * Retrieves several variants with the extras they include, keyed by
      * variant id. Ids that do not match a variant are left out.
      *
-     * @param query the validated variant ids, at most 30
+     * @param query the validated variant ids, at most 100
      * @return a response with the variants, keyed by variant id
      */
     @Operation(
@@ -182,7 +182,7 @@ public class VariantController {
             description = """
                     **Access: Internal** (booking-service).
 
-                    Takes 1-30 variant ids, as `?variantIds=<id>,<id>` or `?variantIds=<id>&variantIds=<id>`. \
+                    Takes 1-100 variant ids, as `?variantIds=<id>,<id>` or `?variantIds=<id>&variantIds=<id>`. \
                     The variants can belong to different room types.
 
                     Returns a map keyed by variant id, so a variant is found directly by its id. \
@@ -195,7 +195,7 @@ public class VariantController {
                     **Response key:** `variants`.
                     """)
     @ApiResponse(responseCode = "200", description = "The variants found, keyed by variant id")
-    @ApiResponse(responseCode = "400", content = @Content(schema = @Schema(implementation = Envelopes.ValidationErrorResult.class)), description = "Invalid input: no ids, more than 30, or an id that is not a valid UUID")
+    @ApiResponse(responseCode = "400", content = @Content(schema = @Schema(implementation = Envelopes.ValidationErrorResult.class)), description = "Invalid input: no ids, more than 100, or an id that is not a valid UUID")
     @GetMapping("/variants")
     public ResponseEntity<Envelopes.VariantsByIdResult> getVariants(@Valid @ParameterObject @ModelAttribute ReviewVariantsQuery query){
         Map<UUID, VariantIncludesResponse> variants = variantService.getVariants(query.variantIds());
