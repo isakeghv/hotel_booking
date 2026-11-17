@@ -3,6 +3,7 @@ package com.example.userserviceproject.repository;
 import com.example.userserviceproject.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -19,4 +20,12 @@ public interface UserRepository extends JpaRepository<User, UUID> {
      *         the given id
      */
     Optional<User> findByUserId(UUID userId);
+
+    /**
+     * To find several users by userId
+     *
+     * @param userIds the id's of the user to find
+     * @return a {@link List} containing the found users
+     */
+    List<User> findAllByUserIdIn(List<UUID> userIds);
 }
