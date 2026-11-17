@@ -157,6 +157,21 @@ gateway:
     - path: /inventory/variants/{variantId}/extras/{extrasId}
       methods: [POST]
       allowed-levels: [2, 3]
+    - path: /booking/cart/rooms
+      methods: [POST]
+      allowed-levels: [0]
+    - path: /booking/cart
+      methods: [GET, DELETE]
+      allowed-levels: [0]
+    - path: /booking/cart/rooms/{itemId}
+      methods: [DELETE]
+      allowed-levels: [0]
+    - path: /booking/cart/rooms/{itemId}/extras/{extraId}
+      methods: [PATCH, DELETE]
+      allowed-levels: [0]
+    - path: /booking/confirm
+      methods: [POST]
+      allowed-levels: [0]
     - path: /booking/bookings/me
       methods: [GET]
       allowed-levels: [0]
@@ -166,9 +181,12 @@ gateway:
     - path: /booking/bookings/me/{bookingId}/cancel
       methods: [POST]
       allowed-levels: [0]
-    - path: /bookings/me/{bookingId}/items/{itemId}/cancel
+    - path: /booking/bookings/me/{bookingId}/items/{itemId}/cancel
       methods: [POST]
       allowed-levels: [0]
-    - path: /bookings/me/{bookingId}/items/{itemId}/extras/{extraId}/cancel
+    - path: /booking/bookings/me/{bookingId}/items/{itemId}/extras/{extraId}/cancel
       methods: [POST]
       allowed-levels: [0]
+    - path: /booking/bookings
+      methods: [GET]
+      allowed-levels: [1, 2, 3]

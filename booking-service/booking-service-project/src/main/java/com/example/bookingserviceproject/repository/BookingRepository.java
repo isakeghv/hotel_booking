@@ -16,9 +16,8 @@ import java.util.UUID;
 /**
  * Bookings. Only derived queries.
  * <p>
- * The customer's lists are sorted closest to today first, with the bookingId
- * as a tie-breaker, so bookings with the same start date keep the same order
- * from one page to the next. A {@code List} with a {@link Pageable} gives one
+ * The lists are sorted with the bookingId as a tie-breaker, so bookings with
+ * the same start date keep the same order from one page to the next. A {@code List} with a {@link Pageable} gives one
  * page without a count query.
  */
 public interface BookingRepository extends JpaRepository<Booking, UUID> {
@@ -78,4 +77,17 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
      * @return the bookings, latest start date first
      */
     List<Booking> findByUserIdAndCancelledTrueOrderByStartTimeDescBookingIdAsc(UUID userId, Pageable pageable);
+
+    /**
+     * The bookings on a date, for staff: those that start, end, or are ongoing
+     * on it, i.e. starting before the day ends and ending after it begins.
+     *
+     * @param cancelled true for only bookings cancelled as a whole, false for only live bookings
+     * @param dayEnd    the start of the next day (exclusive)
+     * @param dayStart  the start of the day (exclusive for the end time)
+     * @param pageable  the page to return
+     * @return the bookings, earliest start first
+     */
+    List<Booking> findByCancelledAndStartTimeLessThanAndEndTimeGreaterThanOrderByStartTimeAscBookingIdAsc(
+            boolean cancelled, LocalDateTime dayEnd, LocalDateTime dayStart, Pageable pageable);
 }
