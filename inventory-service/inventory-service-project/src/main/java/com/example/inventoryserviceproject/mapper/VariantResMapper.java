@@ -1,6 +1,7 @@
 package com.example.inventoryserviceproject.mapper;
 
 import com.example.inventoryserviceproject.dto.response.RoomTypeVariantsResponse;
+import com.example.inventoryserviceproject.dto.response.VariantIncludesResponse;
 import com.example.inventoryserviceproject.dto.response.VariantResponse;
 import com.example.inventoryserviceproject.model.Extra;
 import com.example.inventoryserviceproject.model.RoomTypeVariant;
@@ -87,7 +88,28 @@ public class VariantResMapper {
             List<VariantIncludes> includes,
             Map<UUID, Extra> extrasById
     ){
-        List<VariantResponse.IncludedExtra> includedExtras = includes.stream()
+        return new VariantResponse(variant.getVariantId(), variant.getVariantName(), toIncludedExtras(includes, extrasById));
+    }
+
+    /**
+     * Builds the map value for a variant with its included extras, without
+     * the variant id. Included extras missing from {@code extrasById} are left out.
+     *
+     * @param variant    the variant
+     * @param includes   the extras included with the variant
+     * @param extrasById the extras to show, by id
+     * @return the variant's name and included extras, sorted by name
+     */
+    public VariantIncludesResponse toVariantIncludesResponse(
+            RoomTypeVariant variant,
+            List<VariantIncludes> includes,
+            Map<UUID, Extra> extrasById
+    ){
+        return new VariantIncludesResponse(variant.getVariantName(), toIncludedExtras(includes, extrasById));
+    }
+
+    private List<VariantResponse.IncludedExtra> toIncludedExtras(List<VariantIncludes> includes, Map<UUID, Extra> extrasById){
+        return includes.stream()
                 .filter(include -> extrasById.containsKey(include.getExtraId()))
                 .map(include -> new VariantResponse.IncludedExtra(
                         include.getExtraId(),
@@ -95,7 +117,5 @@ public class VariantResMapper {
                         include.getAmount()))
                 .sorted(Comparator.comparing(VariantResponse.IncludedExtra::name))
                 .toList();
-
-        return new VariantResponse(variant.getVariantId(), variant.getVariantName(), includedExtras);
     }
 }

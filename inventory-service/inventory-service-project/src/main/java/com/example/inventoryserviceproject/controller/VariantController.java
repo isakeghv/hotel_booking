@@ -4,7 +4,9 @@ package com.example.inventoryserviceproject.controller;
 import com.example.inventoryserviceproject.dto.request.ReviewLinkExtraToVariant;
 import com.example.inventoryserviceproject.dto.request.ReviewNewRoomVariant;
 import com.example.inventoryserviceproject.dto.request.ReviewVariantQuery;
+import com.example.inventoryserviceproject.dto.request.ReviewVariantsQuery;
 import com.example.inventoryserviceproject.dto.response.RoomTypeVariantsResponse;
+import com.example.inventoryserviceproject.dto.response.VariantIncludesResponse;
 import com.example.inventoryserviceproject.dto.response.VariantResponse;
 import com.example.inventoryserviceproject.dto.response.Envelopes;
 import com.example.inventoryserviceproject.service.VariantService;
@@ -19,6 +21,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -149,5 +152,18 @@ public class VariantController {
     ){
         VariantResponse variant = variantService.getVariant(roomTypeId, variantId);
         return ClientResponse.ok(new Envelopes.VariantResult(variant));
+    }
+
+    /**
+     * Retrieves several variants with the extras they include, keyed by
+     * variant id. Ids that do not match a variant are left out.
+     *
+     * @param query the validated variant ids, at most 30
+     * @return a response with the variants, keyed by variant id
+     */
+    @GetMapping("/variants")
+    public ResponseEntity<Envelopes.VariantsByIdResult> getVariants(@Valid @ModelAttribute ReviewVariantsQuery query){
+        Map<UUID, VariantIncludesResponse> variants = variantService.getVariants(query.variantIds());
+        return ClientResponse.ok(new Envelopes.VariantsByIdResult(variants));
     }
 }

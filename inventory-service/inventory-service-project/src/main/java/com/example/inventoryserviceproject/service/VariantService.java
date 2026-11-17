@@ -7,6 +7,7 @@ import com.example.inventoryserviceproject.exception.InternalServerException;
 import com.example.inventoryserviceproject.exception.NotFoundException;
 import com.example.inventoryserviceproject.dto.request.ReviewVariantQuery;
 import com.example.inventoryserviceproject.dto.response.RoomTypeVariantsResponse;
+import com.example.inventoryserviceproject.dto.response.VariantIncludesResponse;
 import com.example.inventoryserviceproject.dto.response.VariantResponse;
 import com.example.inventoryserviceproject.mapper.VariantResMapper;
 import com.example.inventoryserviceproject.model.*;
@@ -147,6 +148,45 @@ public class VariantService {
                         .collect(Collectors.toMap(Extra::getExtraId, Function.identity()));
 
         return variantResMapper.toVariantResponse(variant, includes, extrasById);
+    }
+
+    /**
+     * Retrieves several variants with the extras they include, keyed by
+     * variant id. Uses three queries regardless of how many ids are given.
+     * Ids that do not match a variant are left out of the map, without an
+     * error. Inactive extras are left out, as in the variant list.
+     *
+     * @param variantIds the ids of the variants; duplicates are returned once
+     * @return the variants found, keyed by variant id
+     */
+    public Map<UUID, VariantIncludesResponse> getVariants(List<UUID> variantIds){
+        List<RoomTypeVariant> variants = variantRepository.findAllById(variantIds);
+        if (variants.isEmpty()) return Map.of();
+
+        Map<UUID, List<VariantIncludes>> includesByVariant = variantIncludesRepository.findAllByIdVariantIdIn(
+                        variants.stream().map(RoomTypeVariant::getVariantId).toList())
+                .stream()
+                .collect(Collectors.groupingBy(VariantIncludes::getVariantId));
+
+        List<UUID> extraIds = includesByVariant.values().stream()
+                .flatMap(List::stream)
+                .map(VariantIncludes::getExtraId)
+                .distinct()
+                .toList();
+        Map<UUID, Extra> extrasById = extraIds.isEmpty()
+                ? Map.of()
+                : extraRepository.findAllById(extraIds)
+                        .stream()
+                        .filter(Extra::getIsActive)
+                        .collect(Collectors.toMap(Extra::getExtraId, Function.identity()));
+
+        return variants.stream()
+                .collect(Collectors.toMap(
+                        RoomTypeVariant::getVariantId,
+                        variant -> variantResMapper.toVariantIncludesResponse(
+                                variant,
+                                includesByVariant.getOrDefault(variant.getVariantId(), List.of()),
+                                extrasById)));
     }
 
     public void createRoomTypeVariant(ReviewNewRoomVariant request, UUID roomTypeId){

@@ -9,6 +9,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * The response bodies of the endpoints. Every response is an object with one
@@ -56,6 +58,9 @@ public final class Envelopes {
 
     /** Body of a single variant. */
     public record VariantResult(VariantResponse variant) {}
+
+    /** Body of several variants, keyed by variant id. */
+    public record VariantsByIdResult(Map<UUID, VariantIncludesResponse> variants) {}
 
     // ----- Beds, extras and images -----
 
