@@ -54,6 +54,9 @@ public final class Envelopes {
     /** Body of the variants of a room type. */
     public record VariantsResult(RoomTypeVariantsResponse variants) {}
 
+    /** Body of a single variant. */
+    public record VariantResult(VariantResponse variant) {}
+
     // ----- Beds, extras and images -----
 
     /** Body when a bed type is created. */

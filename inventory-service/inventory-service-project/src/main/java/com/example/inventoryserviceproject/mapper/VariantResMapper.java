@@ -1,6 +1,7 @@
 package com.example.inventoryserviceproject.mapper;
 
 import com.example.inventoryserviceproject.dto.response.RoomTypeVariantsResponse;
+import com.example.inventoryserviceproject.dto.response.VariantResponse;
 import com.example.inventoryserviceproject.model.Extra;
 import com.example.inventoryserviceproject.model.RoomTypeVariant;
 import com.example.inventoryserviceproject.model.VariantIncludes;
@@ -8,6 +9,7 @@ import com.example.inventoryserviceproject.model.VariantInformation;
 import com.example.inventoryserviceproject.utils.PriceUtils;
 import org.springframework.stereotype.Component;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -69,5 +71,31 @@ public class VariantResMapper {
                 includedExtras,
                 pricePerNight,
                 total);
+    }
+
+    /**
+     * Builds the response for a single variant with its included extras.
+     * Included extras missing from {@code extrasById} are left out.
+     *
+     * @param variant    the variant
+     * @param includes   the extras included with the variant
+     * @param extrasById the extras to show, by id
+     * @return the variant response, with the extras sorted by name
+     */
+    public VariantResponse toVariantResponse(
+            RoomTypeVariant variant,
+            List<VariantIncludes> includes,
+            Map<UUID, Extra> extrasById
+    ){
+        List<VariantResponse.IncludedExtra> includedExtras = includes.stream()
+                .filter(include -> extrasById.containsKey(include.getExtraId()))
+                .map(include -> new VariantResponse.IncludedExtra(
+                        include.getExtraId(),
+                        extrasById.get(include.getExtraId()).getName(),
+                        include.getAmount()))
+                .sorted(Comparator.comparing(VariantResponse.IncludedExtra::name))
+                .toList();
+
+        return new VariantResponse(variant.getVariantId(), variant.getVariantName(), includedExtras);
     }
 }

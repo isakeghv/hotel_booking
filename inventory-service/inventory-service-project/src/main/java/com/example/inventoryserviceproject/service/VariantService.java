@@ -7,6 +7,7 @@ import com.example.inventoryserviceproject.exception.InternalServerException;
 import com.example.inventoryserviceproject.exception.NotFoundException;
 import com.example.inventoryserviceproject.dto.request.ReviewVariantQuery;
 import com.example.inventoryserviceproject.dto.response.RoomTypeVariantsResponse;
+import com.example.inventoryserviceproject.dto.response.VariantResponse;
 import com.example.inventoryserviceproject.mapper.VariantResMapper;
 import com.example.inventoryserviceproject.model.*;
 import com.example.inventoryserviceproject.repository.*;
@@ -124,6 +125,30 @@ public class VariantService {
      * @throws NotFoundException  if the room type does not exist
      * @throws ConflictException  if the room type already has a variant with this name
      */
+    /**
+     * Retrieves a variant of a room type with the extras it includes. Inactive
+     * extras are left out, as in the variant list.
+     *
+     * @param roomTypeId the id of the room type
+     * @param variantId  the id of the variant
+     * @return the variant with its included extras
+     * @throws NotFoundException if the variant does not exist, or belongs to another room type
+     */
+    public VariantResponse getVariant(UUID roomTypeId, UUID variantId){
+        RoomTypeVariant variant = variantRepository.findByVariantIdAndRoomTypeId(variantId, roomTypeId)
+                .orElseThrow(() -> new NotFoundException("Variant not found"));
+
+        List<VariantIncludes> includes = variantIncludesRepository.findAllByIdVariantId(variantId);
+        Map<UUID, Extra> extrasById = includes.isEmpty()
+                ? Map.of()
+                : extraRepository.findAllById(includes.stream().map(VariantIncludes::getExtraId).toList())
+                        .stream()
+                        .filter(Extra::getIsActive)
+                        .collect(Collectors.toMap(Extra::getExtraId, Function.identity()));
+
+        return variantResMapper.toVariantResponse(variant, includes, extrasById);
+    }
+
     public void createRoomTypeVariant(ReviewNewRoomVariant request, UUID roomTypeId){
         boolean roomExists = roomTypesRepository.existsById(roomTypeId);
         if (!roomExists) throw new NotFoundException("Room-type not found");

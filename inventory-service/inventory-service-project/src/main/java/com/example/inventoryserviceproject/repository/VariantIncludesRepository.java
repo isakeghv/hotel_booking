@@ -22,4 +22,12 @@ public interface VariantIncludesRepository extends JpaRepository<VariantIncludes
      * @return the links to the included extras, or an empty list if there are none
      */
     List<VariantIncludes> findAllByIdVariantIdIn(Collection<UUID> variantIds);
+
+    /**
+     * Finds the extras included with a variant.
+     *
+     * @param variantId the id of the variant
+     * @return the included extras, or an empty list if there are none
+     */
+    List<VariantIncludes> findAllByIdVariantId(UUID variantId);
 }

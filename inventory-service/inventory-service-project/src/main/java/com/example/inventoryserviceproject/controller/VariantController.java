@@ -5,6 +5,7 @@ import com.example.inventoryserviceproject.dto.request.ReviewLinkExtraToVariant;
 import com.example.inventoryserviceproject.dto.request.ReviewNewRoomVariant;
 import com.example.inventoryserviceproject.dto.request.ReviewVariantQuery;
 import com.example.inventoryserviceproject.dto.response.RoomTypeVariantsResponse;
+import com.example.inventoryserviceproject.dto.response.VariantResponse;
 import com.example.inventoryserviceproject.dto.response.Envelopes;
 import com.example.inventoryserviceproject.service.VariantService;
 import com.example.inventoryserviceproject.utils.ClientResponse;
@@ -132,5 +133,21 @@ public class VariantController {
     ){
         RoomTypeVariantsResponse variants = variantService.getRoomTypeVariants(roomTypeId, query);
         return ClientResponse.ok(new Envelopes.VariantsResult(variants));
+    }
+
+    /**
+     * Retrieves a variant of a room type, with the extras it includes.
+     *
+     * @param roomTypeId the id of the room type
+     * @param variantId  the id of the variant
+     * @return a response with the variant and its included extras
+     */
+    @GetMapping("/roomtypes/{roomTypeId}/variants/{variantId}")
+    public ResponseEntity<Envelopes.VariantResult> getVariant(
+            @PathVariable UUID roomTypeId,
+            @PathVariable UUID variantId
+    ){
+        VariantResponse variant = variantService.getVariant(roomTypeId, variantId);
+        return ClientResponse.ok(new Envelopes.VariantResult(variant));
     }
 }
