@@ -190,3 +190,6 @@ gateway:
     - path: /booking/bookings
       methods: [GET]
       allowed-levels: [1, 2, 3]
+    - path: /booking/bookings/{bookingId}
+      methods: [GET]
+      allowed-levels: [1, 2, 3]
