@@ -3,6 +3,7 @@ package com.example.bookingserviceproject.client;
 import com.example.bookingserviceproject.dto.inventory.InventoryExtraPrice;
 import com.example.bookingserviceproject.dto.inventory.InventoryPrimaryImage;
 import com.example.bookingserviceproject.dto.inventory.InventoryReservation;
+import com.example.bookingserviceproject.dto.inventory.InventoryVariant;
 import com.example.bookingserviceproject.exception.PassThroughException;
 import com.example.bookingserviceproject.exception.ServiceUnavailableException;
 import org.slf4j.Logger;
@@ -34,7 +35,11 @@ public class InventoryClient {
     private static final String RESERVE_UNAVAILABLE = "Rooms cannot be reserved right now. Please try again later";
     private static final String EXTRA_UNAVAILABLE = "Extras cannot be added right now. Please try again later";
     private static final String IMAGES_UNAVAILABLE = "Images cannot be fetched right now";
+    private static final String VARIANTS_UNAVAILABLE = "Variants cannot be fetched right now";
     private static final String DEFAULT_REFUSAL = "The request could not be completed";
+
+    // Inventory's limit of ids per request, for both primary images and variants
+    public static final int MAX_IDS_PER_REQUEST = 100;
 
     private final RestClient restClient;
     private final JsonMapper jsonMapper;
@@ -130,9 +135,9 @@ public class InventoryClient {
      * Fetches the primary image of several room types in one request. A room
      * type without a primary image is returned with its file path and alt text null.
      *
-     * @param roomTypeIds the room types, 1-30 (inventory's limit)
+     * @param roomTypeIds the room types, 1 to {@link #MAX_IDS_PER_REQUEST}
      * @return one entry per distinct room type
-     * @throws PassThroughException        if inventory refuses, e.g. 400 more than 30 ids
+     * @throws PassThroughException        if inventory refuses, e.g. 400 too many ids
      * @throws ServiceUnavailableException if inventory fails or cannot be reached
      */
     public List<InventoryPrimaryImage> getPrimaryImages(Collection<UUID> roomTypeIds){
@@ -156,6 +161,39 @@ public class InventoryClient {
             throw new ServiceUnavailableException(IMAGES_UNAVAILABLE);
         }
         return result.primaryImages();
+    }
+
+    /**
+     * Fetches several variants, with the extras they include, in one request.
+     * Ids that match no variant are left out.
+     *
+     * @param variantIds the variants, 1 to {@link #MAX_IDS_PER_REQUEST}
+     * @return the variants found, by variant id
+     * @throws PassThroughException        if inventory refuses, e.g. 400 too many ids
+     * @throws ServiceUnavailableException if inventory fails or cannot be reached
+     */
+    public Map<UUID, InventoryVariant> getVariants(Collection<UUID> variantIds){
+        InventoryVariant.Result result;
+        try {
+            result = restClient.get()
+                    .uri(uri -> uri.path("/inventory/variants")
+                            .queryParam("variantIds", variantIds.toArray())
+                            .build())
+                    .retrieve()
+                    .onStatus(HttpStatusCode::isError, (request, response) -> {
+                        throw toException(response, VARIANTS_UNAVAILABLE);
+                    })
+                    .body(InventoryVariant.Result.class);
+        } catch (ResourceAccessException e){
+            log.error("Inventory-service could not be reached to fetch variants: {}", e.getMessage());
+            throw new ServiceUnavailableException(VARIANTS_UNAVAILABLE);
+        }
+
+        if (result == null || result.variants() == null){
+            log.error("Inventory-service returned no variants for {} variant ids", variantIds.size());
+            throw new ServiceUnavailableException(VARIANTS_UNAVAILABLE);
+        }
+        return result.variants();
     }
 
     /**

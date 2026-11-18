@@ -24,6 +24,17 @@ public interface BookingAddonRepository extends JpaRepository<BookingAddon, UUID
     List<BookingAddon> findAllByBooking_BookingId(UUID bookingId);
 
     /**
+     * Loads the extras of a booking, sorted by name. The room each extra belongs
+     * to is fetched in the same query, so the extras can be grouped by room
+     * without a transaction.
+     *
+     * @param bookingId the id of a booking
+     * @return the extras on all of the booking's rooms, by name
+     */
+    @EntityGraph(attributePaths = "item")
+    List<BookingAddon> findAllByBooking_BookingIdOrderByNameAsc(UUID bookingId);
+
+    /**
      * Finds one extra on a room. A room has each extra at most once
      * ({@code UNIQUE (item_id, extra_id)}), so these two ids identify one line.
      *

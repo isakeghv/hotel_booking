@@ -5,12 +5,14 @@ import com.example.bookingserviceproject.exception.ServiceUnavailableException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -65,5 +67,36 @@ public class UserClient {
             throw new ServiceUnavailableException(USERS_UNAVAILABLE);
         }
         return users;
+    }
+
+    /**
+     * Fetches the basic information of one user.
+     *
+     * @param userId the id of the user
+     * @return the user, or empty if the user-service does not know the user (404)
+     * @throws ServiceUnavailableException if the user-service fails, refuses otherwise or cannot be reached
+     */
+    public Optional<BasicUserInfo> getBasicUser(UUID userId){
+        try {
+            return restClient.get()
+                    .uri("/users/{userId}/basic", userId)
+                    .exchange((request, response) -> {
+                        // Unknown user: an answer, not a failure
+                        if (response.getStatusCode().isSameCodeAs(HttpStatus.NOT_FOUND)) return Optional.empty();
+                        if (response.getStatusCode().isError()){
+                            log.error("User-service failed to return a basic user with status {}", response.getStatusCode().value());
+                            throw new ServiceUnavailableException(USERS_UNAVAILABLE);
+                        }
+                        BasicUserInfo.Result result = response.bodyTo(BasicUserInfo.Result.class);
+                        if (result == null || result.user() == null){
+                            log.error("User-service returned no basic user for user {}", userId);
+                            throw new ServiceUnavailableException(USERS_UNAVAILABLE);
+                        }
+                        return Optional.of(result.user());
+                    });
+        } catch (RestClientException e){
+            log.error("User-service could not be reached to fetch a basic user: {}", e.getMessage());
+            throw new ServiceUnavailableException(USERS_UNAVAILABLE);
+        }
     }
 }

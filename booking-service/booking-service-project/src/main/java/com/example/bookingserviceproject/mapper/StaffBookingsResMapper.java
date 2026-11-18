@@ -10,10 +10,19 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class StaffBookingsResMapper {
+    private final UserResMapper userResMapper;
 
     /**
-     * Builds the overview of one booking. The user's id always comes from the
-     * booking, so staff can find the user even without the user-service's answer.
+     * Creates the mapper with the mapper it uses for the guest.
+     *
+     * @param userResMapper mapper from the user-service's user information to the guest
+     */
+    public StaffBookingsResMapper(UserResMapper userResMapper){
+        this.userResMapper = userResMapper;
+    }
+
+    /**
+     * Builds the overview of one booking.
      *
      * @param booking the booking
      * @param rooms   the number of rooms to show
@@ -21,13 +30,9 @@ public class StaffBookingsResMapper {
      * @return the overview, with the names and {@code isActive} null if there is no user information
      */
     public StaffBookingOverview toOverview(Booking booking, int rooms, BasicUserInfo user){
-        StaffBookingOverview.User guest = user == null
-                ? new StaffBookingOverview.User(booking.getUserId(), null, null, null)
-                : new StaffBookingOverview.User(booking.getUserId(), user.firstName(), user.lastName(), user.isActive());
-
         return new StaffBookingOverview(
                 booking.getBookingId(),
-                guest,
+                userResMapper.toResponse(booking.getUserId(), user),
                 rooms,
                 booking.getStartTime(),
                 booking.getEndTime(),

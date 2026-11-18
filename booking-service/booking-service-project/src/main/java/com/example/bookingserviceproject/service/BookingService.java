@@ -50,8 +50,6 @@ public class BookingService {
 
     // Bookings per list per page in the user's overviews
     private static final int PAGE_SIZE = 10;
-    // Inventory's limit of room types per request for primary images
-    private static final int MAX_IMAGES_PER_REQUEST = 30;
     // A booking's image is the primary image of its first room's room type
     private static final Comparator<BookingItem> FIRST_ROOM = Comparator.comparing(BookingItem::getFromTime)
             .thenComparing(BookingItem::getRoomTypeName);
@@ -198,7 +196,7 @@ public class BookingService {
                 .collect(Collectors.toSet());
         Map<UUID, List<BookingItem>> activeRoomsByBooking = activeRooms(bookingIds);
 
-        // The first active room's room type of each booking: at most 30 (3 lists of 10)
+        // The first active room's room type of each booking: at most 30 (3 lists of 10), within inventory's limit
         Map<UUID, UUID> roomTypeByBooking = activeRoomsByBooking.entrySet().stream()
                 .collect(Collectors.toMap(Map.Entry::getKey,
                         entry -> entry.getValue().stream().min(FIRST_ROOM).orElseThrow().getRoomTypeId()));
@@ -248,23 +246,23 @@ public class BookingService {
 
     /**
      * Fetches the primary images of the given room types. The images are only
-     * decoration in the overviews, so if inventory is slow or down, the
-     * overviews are returned without them instead of failing.
+     * decoration in the booking views, so if inventory is slow or down, the
+     * views are returned without them instead of failing.
      *
      * @param roomTypeIds the room types
      * @return the images by room type id, or empty if there are none or they could not be fetched
      */
-    private Map<UUID, InventoryPrimaryImage> primaryImages(Set<UUID> roomTypeIds){
+    public Map<UUID, InventoryPrimaryImage> primaryImages(Set<UUID> roomTypeIds){
         if (roomTypeIds.isEmpty()) return Map.of();
         // Never more than inventory accepts. Room types beyond the limit are shown without an image
-        Set<UUID> requested = roomTypeIds.size() <= MAX_IMAGES_PER_REQUEST ? roomTypeIds
-                : roomTypeIds.stream().limit(MAX_IMAGES_PER_REQUEST).collect(Collectors.toSet());
+        Set<UUID> requested = roomTypeIds.size() <= InventoryClient.MAX_IDS_PER_REQUEST ? roomTypeIds
+                : roomTypeIds.stream().limit(InventoryClient.MAX_IDS_PER_REQUEST).collect(Collectors.toSet());
         try {
             return inventoryClient.getPrimaryImages(requested).stream()
                     .filter(image -> image.roomTypeId() != null)
                     .collect(Collectors.toMap(InventoryPrimaryImage::roomTypeId, Function.identity(), (first, second) -> first));
         } catch (ServiceUnavailableException | PassThroughException e){
-            log.warn("Booking overviews are returned without images: {}", e.getMessage());
+            log.warn("Bookings are returned without images: {}", e.getMessage());
             return Map.of();
         }
     }

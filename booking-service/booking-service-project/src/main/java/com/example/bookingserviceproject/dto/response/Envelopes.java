@@ -28,4 +28,7 @@ public final class Envelopes {
 
     /** Body of the staff's list of bookings on a date. */
     public record StaffBookingsResult(List<StaffBookingOverview> bookings) {}
+
+    /** Body when one booking is returned to staff. */
+    public record StaffBookingResult(StaffBookingResponse booking) {}
 }

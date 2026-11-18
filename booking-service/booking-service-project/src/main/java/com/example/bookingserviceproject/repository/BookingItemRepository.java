@@ -21,6 +21,12 @@ public interface BookingItemRepository extends JpaRepository<BookingItem, UUID> 
     List<BookingItem> findAllByBooking_BookingId(UUID bookingId);
 
     /**
+     * @param bookingId the id of a booking
+     * @return the booking's rooms, by check-in, then room number
+     */
+    List<BookingItem> findAllByBooking_BookingIdOrderByFromTimeAscRoomNumberAsc(UUID bookingId);
+
+    /**
      * Loads the rooms of several bookings in one query. The booking is fetched
      * in the same query (it is one row per room, not a collection), so the rooms
      * can be grouped by booking without loading each booking separately.

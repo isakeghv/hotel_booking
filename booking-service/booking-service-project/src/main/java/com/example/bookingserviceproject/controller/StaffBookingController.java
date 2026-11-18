@@ -2,18 +2,21 @@ package com.example.bookingserviceproject.controller;
 
 import com.example.bookingserviceproject.dto.response.Envelopes;
 import com.example.bookingserviceproject.dto.response.StaffBookingOverview;
+import com.example.bookingserviceproject.dto.response.StaffBookingResponse;
 import com.example.bookingserviceproject.service.StaffBookingService;
 import com.example.bookingserviceproject.utils.ClientResponse;
 import jakarta.validation.constraints.Min;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * REST controller for the staff's views of bookings. Only staff (level 1-3)
@@ -50,5 +53,18 @@ public class StaffBookingController {
     ){
         List<StaffBookingOverview> bookings = staffBookingService.getBookingsOn(date, page, cancelled);
         return ClientResponse.ok(new Envelopes.StaffBookingsResult(bookings));
+    }
+
+    /**
+     * Returns any booking, with every room (room number, variant and what it
+     * includes, check-in/out), the extras, prices, cancellations, and the guest.
+     *
+     * @param bookingId the id of the booking
+     * @return a response with the booking
+     */
+    @GetMapping("/bookings/{bookingId}")
+    public ResponseEntity<Envelopes.StaffBookingResult> getBooking(@PathVariable UUID bookingId){
+        StaffBookingResponse booking = staffBookingService.getBooking(bookingId);
+        return ClientResponse.ok(new Envelopes.StaffBookingResult(booking));
     }
 }
